@@ -220,11 +220,11 @@ CRON_SECRET=
 ## 14. Roadmap de desarrollo (checklist por fases para Claude Code)
 
 ### Fase 0 — Setup
-- [ ] Inicializar proyecto Next.js (App Router, TypeScript, Tailwind, shadcn/ui)
-- [ ] Configurar proyecto Supabase + conectar CLI
-- [ ] Definir esquema de base de datos (migraciones SQL) según sección 5
-- [ ] Configurar RLS policies por tabla
-- [ ] Configurar Vercel + GitHub + variables de entorno
+- [X] Inicializar proyecto Next.js (App Router, TypeScript, Tailwind, shadcn/ui)
+- [~] Configurar proyecto Supabase + conectar CLI — scaffold `supabase/` + `config.toml` listos; falta `supabase link` + `db push` contra el proyecto hosted de Carlos
+- [X] Definir esquema de base de datos (migraciones SQL) según sección 5
+- [X] Configurar RLS policies por tabla
+- [~] Configurar Vercel + GitHub + variables de entorno — `.env.example` completo; falta crear repo GitHub, conectar a Vercel y pegar env vars (acciones de Carlos)
 
 ### Fase 1 — MVP
 - [ ] Auth (Supabase Auth) + tabla `profiles` + middleware de roles
