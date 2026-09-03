@@ -11,6 +11,7 @@ import { todayInTz, addDays } from "@/lib/availability/tz";
 import { rateLimit } from "@/lib/security/rate-limit";
 import { clientIp } from "@/lib/security/request";
 import { verifyTurnstile } from "@/lib/security/turnstile";
+import { isWithinMonthlyBookingLimit } from "@/lib/stripe/plan-limit";
 
 export type BookableStaff = { id: string; display_name: string };
 
@@ -136,6 +137,13 @@ export async function createBooking(
     .maybeSingle();
   if (!business || business.status === "suspended") {
     return { ok: false, error: "Negocio no disponible." };
+  }
+
+  if (!(await isWithinMonthlyBookingLimit(business.id, business.timezone))) {
+    return {
+      ok: false,
+      error: "Este negocio alcanzó su límite de reservas para este mes.",
+    };
   }
 
   const { data: service } = await admin
