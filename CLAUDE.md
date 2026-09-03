@@ -232,7 +232,7 @@ CRON_SECRET=
 - [X] CRUD servicios por negocio — `/dashboard/servicios` (+ `/nuevo`, `/[id]`): listar/crear/editar/activar-desactivar/eliminar vía RLS `services_admin_write`.
 - [X] CRUD staff + horarios (`availability_rules`, `availability_exceptions`) — `/dashboard/staff` (CRUD + `staff_services` + invitación por email → rol `staff` + panel) y `/dashboard/staff/[id]/horario` (franjas semanales + excepciones).
 - [X] Lógica de cálculo de disponibilidad (sin doble-booking, con constraint en DB) — `lib/availability/` (`computeAvailability` puro + `getSlots` server-side). Constraint `EXCLUDE gist` desde Fase 0. Parámetros por negocio en Configuración (antelación, horizonte, intervalo).
-- [~] Página pública de reserva `/[slug]` (flujo completo descrito en sección 6) — HECHO: flujo servicio→staff→slot→datos→confirmación, `createBooking` server-side con revalidación + find-or-create de customer + cancel_token + `auto_confirm_bookings`. PENDIENTE (sus propios bloques): Turnstile, rate limiting, límite plan Free, notificaciones.
+- [~] Página pública de reserva `/[slug]` — flujo completo + `createBooking` server-side (revalidación, find-or-create customer, cancel_token, `auto_confirm_bookings`, rate limit, Turnstile, notificaciones). PENDIENTE: enforcement del límite del plan Free (bloque Stripe).
 - [X] Cancelación/reagendado vía token sin login — `/reservas/[token]`: ver / cancelar / reagendar respetando `cancellation_notice_hours`; el `cancel_token` rota al reagendar.
 - [~] Dashboard admin de negocio (calendario + CRUDs + configuración) — HECHO: CRUDs (servicios, staff, horarios), configuración, y agenda de citas `/dashboard/citas` (día/semana, acciones de estado). Nav lateral pendiente de pulir.
 - [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar completada/no-show/cancelada/confirmada.
@@ -241,7 +241,7 @@ CRON_SECRET=
 - [~] Integración WhatsApp (Twilio) — confirmación + recordatorios — código completo en modo protegido; solo se envía si el plan incluye la feature. Falta credenciales + plantilla aprobada.
 - [X] Vercel Cron para recordatorios programados — `app/api/cron/reminders` + `vercel.json` (cada 30 min, 24h y 2h antes), protegido por `CRON_SECRET`.
 - [ ] Stripe Subscriptions (Checkout, Billing Portal, webhook, enforcement de límite Free)
-- [ ] Anti-spam (Turnstile + rate limiting)
+- [~] Anti-spam (Turnstile + rate limiting) — rate limiting en memoria activo; Turnstile en modo protegido (widget + verify, no-op sin claves). Falta pegar claves de Cloudflare.
 - [ ] QA end-to-end + deploy a producción
 
 ### Fase 2
