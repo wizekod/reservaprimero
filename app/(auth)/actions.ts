@@ -54,12 +54,15 @@ export async function login(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, business_id")
     .eq("id", data.user.id)
     .maybeSingle();
 
   const role: UserRole = profile?.role ?? "business_admin";
-  redirect(safeNext(formData.get("next")) ?? roleHome(role));
+  const next = safeNext(formData.get("next"));
+  if (next) redirect(next);
+  if (role === "business_admin" && !profile?.business_id) redirect("/onboarding");
+  redirect(roleHome(role));
 }
 
 export async function signUp(
@@ -97,7 +100,7 @@ export async function signUp(
     };
   }
 
-  redirect("/dashboard");
+  redirect("/onboarding");
 }
 
 export async function signOut(): Promise<void> {
