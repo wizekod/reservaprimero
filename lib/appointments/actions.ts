@@ -1,10 +1,15 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
 import { getMyBusiness } from "@/lib/businesses/queries";
+import {
+  notifyBookingCancelled,
+  notifyBookingConfirmed,
+} from "@/lib/notifications/dispatch";
 
 type Result = { ok: boolean; error?: string };
 
@@ -43,7 +48,9 @@ export async function updateAppointmentStatus(
     .eq("business_id", business.id);
   if (error) return { ok: false, error: "No se pudo actualizar." };
 
-  // TODO(notificaciones): avisar al cliente si se confirma/cancela.
+  if (next === "confirmed") after(() => notifyBookingConfirmed(id));
+  if (next === "cancelled") after(() => notifyBookingCancelled(id));
+
   revalidatePath("/dashboard/citas");
   revalidatePath("/staff");
   return { ok: true };

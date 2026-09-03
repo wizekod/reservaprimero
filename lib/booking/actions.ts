@@ -1,8 +1,10 @@
 "use server";
 
+import { after } from "next/server";
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { notifyBookingCreated } from "@/lib/notifications/dispatch";
 import { clientEnv } from "@/lib/env";
 import { getSlots } from "@/lib/availability/queries";
 import { todayInTz, addDays } from "@/lib/availability/tz";
@@ -218,7 +220,7 @@ export async function createBooking(
       status,
       notes: b.notes ?? null,
     })
-    .select("cancel_token, status")
+    .select("id, cancel_token, status")
     .single();
 
   if (apptError || !appointment) {
@@ -228,7 +230,7 @@ export async function createBooking(
     return { ok: false, error: "No se pudo crear la reserva." };
   }
 
-  // TODO(notificaciones): disparar email/WhatsApp de confirmación + aviso interno.
+  after(() => notifyBookingCreated(appointment.id));
 
   return {
     ok: true,

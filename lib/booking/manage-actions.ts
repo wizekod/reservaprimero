@@ -1,12 +1,17 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { after } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientEnv } from "@/lib/env";
 import { getSlots } from "@/lib/availability/queries";
 import { todayInTz, addDays } from "@/lib/availability/tz";
 import { getAppointmentByToken } from "@/lib/booking/manage";
+import {
+  notifyBookingCancelled,
+  notifyBookingRescheduled,
+} from "@/lib/notifications/dispatch";
 
 type Result = { ok: boolean; error?: string };
 
@@ -26,7 +31,7 @@ export async function cancelByToken(token: string): Promise<Result> {
     .eq("id", appt.id);
   if (error) return { ok: false, error: "No se pudo cancelar." };
 
-  // TODO(notificaciones): avisar al negocio de la cancelación.
+  after(() => notifyBookingCancelled(appt.id));
   return { ok: true };
 }
 
@@ -109,7 +114,7 @@ export async function rescheduleByToken(
     return { ok: false, error: "No se pudo reagendar." };
   }
 
-  // TODO(notificaciones): avisar del cambio de horario.
+  after(() => notifyBookingRescheduled(appt.id));
   return {
     ok: true,
     newToken,
