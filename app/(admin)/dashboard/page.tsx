@@ -53,6 +53,12 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 text-sm">
           <Link
+            href="/dashboard/servicios"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Servicios
+          </Link>
+          <Link
             href="/dashboard/configuracion"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
@@ -65,7 +71,7 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle className="text-base">Próximos bloques de Fase 1</CardTitle>
           <CardDescription>
-            Servicios, staff y horarios, y luego el calendario de citas.
+            Staff y horarios, y luego el calendario de citas.
           </CardDescription>
         </CardHeader>
       </Card>
