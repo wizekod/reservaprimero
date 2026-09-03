@@ -152,6 +152,84 @@ export function ConfiguracionForm({
               />
               <FieldError messages={state.fieldErrors?.logo_url} />
             </div>
+
+            <div className="mt-2 border-t pt-4">
+              <p className="text-sm font-medium">Reservas</p>
+              <p className="text-sm text-muted-foreground">
+                Reglas para la página pública de reservas.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="min_booking_notice_hours">
+                  Antelación mínima (horas)
+                </Label>
+                <Input
+                  id="min_booking_notice_hours"
+                  name="min_booking_notice_hours"
+                  type="number"
+                  min={0}
+                  max={720}
+                  defaultValue={business.min_booking_notice_hours}
+                  required
+                />
+                <FieldError messages={state.fieldErrors?.min_booking_notice_hours} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="max_booking_days">
+                  Se puede reservar hasta (días)
+                </Label>
+                <Input
+                  id="max_booking_days"
+                  name="max_booking_days"
+                  type="number"
+                  min={1}
+                  max={365}
+                  defaultValue={business.max_booking_days}
+                  required
+                />
+                <FieldError messages={state.fieldErrors?.max_booking_days} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="slot_interval_minutes">
+                  Intervalo entre horarios (min)
+                </Label>
+                <select
+                  id="slot_interval_minutes"
+                  name="slot_interval_minutes"
+                  defaultValue={business.slot_interval_minutes}
+                  className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  {[5, 10, 15, 20, 30, 60].map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+                <FieldError messages={state.fieldErrors?.slot_interval_minutes} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="cancellation_notice_hours">
+                  Margen para cancelar (horas)
+                </Label>
+                <Input
+                  id="cancellation_notice_hours"
+                  name="cancellation_notice_hours"
+                  type="number"
+                  min={0}
+                  max={720}
+                  defaultValue={business.cancellation_notice_hours}
+                  required
+                />
+                <FieldError
+                  messages={state.fieldErrors?.cancellation_notice_hours}
+                />
+              </div>
+            </div>
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={pending}>

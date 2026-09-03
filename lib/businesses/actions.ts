@@ -36,6 +36,8 @@ const createSchema = z.object({
   timezone: timezoneField,
 });
 
+const SLOT_INTERVALS = [5, 10, 15, 20, 30, 60] as const;
+
 const updateSchema = z.object({
   name: nameField,
   slug: slugSchema,
@@ -50,6 +52,29 @@ const updateSchema = z.object({
     emptyToUndefined,
     z.string().trim().url("URL inválida").optional(),
   ),
+  min_booking_notice_hours: z.coerce
+    .number()
+    .int()
+    .min(0, "Entre 0 y 720")
+    .max(720, "Entre 0 y 720"),
+  max_booking_days: z.coerce
+    .number()
+    .int()
+    .min(1, "Entre 1 y 365")
+    .max(365, "Entre 1 y 365"),
+  slot_interval_minutes: z.coerce
+    .number()
+    .int()
+    .refine(
+      (v): v is (typeof SLOT_INTERVALS)[number] =>
+        (SLOT_INTERVALS as readonly number[]).includes(v),
+      "Intervalo no permitido",
+    ),
+  cancellation_notice_hours: z.coerce
+    .number()
+    .int()
+    .min(0, "Entre 0 y 720")
+    .max(720, "Entre 0 y 720"),
 });
 
 /** Alta de negocio: crea `businesses` + enlaza `profiles.business_id`. */
@@ -144,6 +169,10 @@ export async function updateBusinessSettings(
     address: formData.get("address"),
     brand_color: formData.get("brand_color"),
     logo_url: formData.get("logo_url"),
+    min_booking_notice_hours: formData.get("min_booking_notice_hours"),
+    max_booking_days: formData.get("max_booking_days"),
+    slot_interval_minutes: formData.get("slot_interval_minutes"),
+    cancellation_notice_hours: formData.get("cancellation_notice_hours"),
   });
   if (!parsed.success) {
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
@@ -169,6 +198,10 @@ export async function updateBusinessSettings(
       address: d.address ?? null,
       brand_color: d.brand_color ?? null,
       logo_url: d.logo_url ?? null,
+      min_booking_notice_hours: d.min_booking_notice_hours,
+      max_booking_days: d.max_booking_days,
+      slot_interval_minutes: d.slot_interval_minutes,
+      cancellation_notice_hours: d.cancellation_notice_hours,
     })
     .eq("id", business.id);
 

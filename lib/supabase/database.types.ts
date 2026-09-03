@@ -190,12 +190,16 @@ export type Database = {
         Row: {
           address: string | null
           brand_color: string | null
+          cancellation_notice_hours: number
           created_at: string
           id: string
           logo_url: string | null
+          max_booking_days: number
+          min_booking_notice_hours: number
           name: string
           phone: string | null
           plan_id: string | null
+          slot_interval_minutes: number
           slug: string
           status: Database["public"]["Enums"]["business_status"]
           stripe_customer_id: string | null
@@ -208,12 +212,16 @@ export type Database = {
         Insert: {
           address?: string | null
           brand_color?: string | null
+          cancellation_notice_hours?: number
           created_at?: string
           id?: string
           logo_url?: string | null
+          max_booking_days?: number
+          min_booking_notice_hours?: number
           name: string
           phone?: string | null
           plan_id?: string | null
+          slot_interval_minutes?: number
           slug: string
           status?: Database["public"]["Enums"]["business_status"]
           stripe_customer_id?: string | null
@@ -226,12 +234,16 @@ export type Database = {
         Update: {
           address?: string | null
           brand_color?: string | null
+          cancellation_notice_hours?: number
           created_at?: string
           id?: string
           logo_url?: string | null
+          max_booking_days?: number
+          min_booking_notice_hours?: number
           name?: string
           phone?: string | null
           plan_id?: string | null
+          slot_interval_minutes?: number
           slug?: string
           status?: Database["public"]["Enums"]["business_status"]
           stripe_customer_id?: string | null
@@ -540,6 +552,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_write_staff_service: {
+        Args: { p_service_id: string; p_staff_member_id: string }
+        Returns: boolean
+      }
       current_business_id: { Args: never; Returns: string }
       current_staff_member_ids: { Args: never; Returns: string[] }
       current_user_role: {
