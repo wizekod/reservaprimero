@@ -242,7 +242,7 @@ CRON_SECRET=
 - [X] Vercel Cron para recordatorios programados — `app/api/cron/reminders` + `vercel.json` (cada 30 min, 24h y 2h antes), protegido por `CRON_SECRET`.
 - [~] Stripe Subscriptions (Checkout, Billing Portal, webhook, enforcement de límite Free) — código completo en modo protegido: checkout/portal/webhook + límite del plan Free ACTIVO. Falta pegar claves de Stripe y el price_id de Premium (en /superadmin/planes).
 - [~] Anti-spam (Turnstile + rate limiting) — rate limiting en memoria activo; Turnstile en modo protegido (widget + verify, no-op sin claves). Falta pegar claves de Cloudflare.
-- [ ] QA end-to-end + deploy a producción
+- [~] QA end-to-end + deploy a producción — suite E2E (14 scripts, ~218 checks) en verde contra Supabase real; typecheck/lint/build ok. Deploy y activación de servicios: ver DEPLOY.md (acciones de Carlos en Vercel/Stripe/Resend/Twilio/Cloudflare).
 
 ### Fase 2
 - [ ] Google Calendar sync (OAuth por staff)
