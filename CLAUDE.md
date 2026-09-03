@@ -236,7 +236,7 @@ CRON_SECRET=
 - [X] Cancelación/reagendado vía token sin login — `/reservas/[token]`: ver / cancelar / reagendar respetando `cancellation_notice_hours`; el `cancel_token` rota al reagendar.
 - [~] Dashboard admin de negocio (calendario + CRUDs + configuración) — HECHO: CRUDs (servicios, staff, horarios), configuración, y agenda de citas `/dashboard/citas` (día/semana, acciones de estado). Nav lateral pendiente de pulir.
 - [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar completada/no-show/cancelada/confirmada.
-- [ ] Dashboard superadmin (negocios, activar/suspender, planes)
+- [X] Dashboard superadmin (negocios, activar/suspender, planes) — `/superadmin` (métricas + tabla de negocios + suspender/reactivar) y `/superadmin/planes` (editar planes). MRR vía Stripe queda para el bloque de Stripe.
 - [ ] Integración email (Resend) — confirmación + recordatorios
 - [ ] Integración WhatsApp (Twilio) — confirmación + recordatorios
 - [ ] Vercel Cron para recordatorios programados
