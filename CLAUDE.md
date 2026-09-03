@@ -228,7 +228,7 @@ CRON_SECRET=
 
 ### Fase 1 — MVP
 - [X] Auth (Supabase Auth) + tabla `profiles` + middleware de roles — `proxy.ts` (Next 16), DAL `requireRole`, login/registro/logout, paneles `/dashboard` `/staff` `/superadmin`. Rutas: prefijo por rol.
-- [ ] CRUD negocios (alta de negocio + slug único)
+- [X] CRUD negocios (alta de negocio + slug único) — `/onboarding` (crea `businesses` + enlaza `profiles.business_id` con service_role), `/dashboard/configuracion` (editar datos vía RLS), validación de slug en vivo. Nota: nuevos negocios entran como `trial` (14 días, plan Free) — ajustable en `lib/businesses/constants.ts`.
 - [ ] CRUD servicios por negocio
 - [ ] CRUD staff + horarios (`availability_rules`, `availability_exceptions`)
 - [ ] Lógica de cálculo de disponibilidad (sin doble-booking, con constraint en DB)
