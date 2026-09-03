@@ -434,6 +434,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          invited_email: string | null
           profile_id: string | null
           updated_at: string
         }
@@ -443,6 +444,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id?: string
+          invited_email?: string | null
           profile_id?: string | null
           updated_at?: string
         }
@@ -452,6 +454,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          invited_email?: string | null
           profile_id?: string | null
           updated_at?: string
         }
@@ -547,6 +550,7 @@ export type Database = {
         Args: { target_business_id: string }
         Returns: boolean
       }
+      is_server_role: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
     }
     Enums: {
@@ -706,7 +710,6 @@ export const Constants = {
     },
   },
 } as const
-
 // ── Aliases de dominio (añadidos a mano; conservar al regenerar con
 //    `npx supabase gen types typescript --project-id <ref> > lib/supabase/database.types.ts`) ──
 export type UserRole = Enums<"user_role">;
