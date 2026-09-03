@@ -77,12 +77,20 @@ export function StaffEditor({
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
-      <Link
-        href="/dashboard/staff"
-        className="text-sm text-muted-foreground underline underline-offset-4"
-      >
-        ← Staff
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/dashboard/staff"
+          className="text-sm text-muted-foreground underline underline-offset-4"
+        >
+          ← Staff
+        </Link>
+        <Link
+          href={`/dashboard/staff/${staff.id}/horario`}
+          className="text-sm font-medium underline underline-offset-4"
+        >
+          Editar horario →
+        </Link>
+      </div>
 
       <form action={formAction}>
         <Card>
