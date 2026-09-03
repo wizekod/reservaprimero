@@ -237,9 +237,9 @@ CRON_SECRET=
 - [~] Dashboard admin de negocio (calendario + CRUDs + configuración) — HECHO: CRUDs (servicios, staff, horarios), configuración, y agenda de citas `/dashboard/citas` (día/semana, acciones de estado). Nav lateral pendiente de pulir.
 - [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar completada/no-show/cancelada/confirmada.
 - [X] Dashboard superadmin (negocios, activar/suspender, planes) — `/superadmin` (métricas + tabla de negocios + suspender/reactivar) y `/superadmin/planes` (editar planes). MRR vía Stripe queda para el bloque de Stripe.
-- [ ] Integración email (Resend) — confirmación + recordatorios
-- [ ] Integración WhatsApp (Twilio) — confirmación + recordatorios
-- [ ] Vercel Cron para recordatorios programados
+- [~] Integración email (Resend) — confirmación + recordatorios — código completo en modo protegido (no-op sin `RESEND_API_KEY`); enganchado a reserva/confirmación/cancelación/reagendado/recordatorio. Falta pegar credenciales.
+- [~] Integración WhatsApp (Twilio) — confirmación + recordatorios — código completo en modo protegido; solo se envía si el plan incluye la feature. Falta credenciales + plantilla aprobada.
+- [X] Vercel Cron para recordatorios programados — `app/api/cron/reminders` + `vercel.json` (cada 30 min, 24h y 2h antes), protegido por `CRON_SECRET`.
 - [ ] Stripe Subscriptions (Checkout, Billing Portal, webhook, enforcement de límite Free)
 - [ ] Anti-spam (Turnstile + rate limiting)
 - [ ] QA end-to-end + deploy a producción
