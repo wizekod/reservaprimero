@@ -227,7 +227,7 @@ CRON_SECRET=
 - [~] Configurar Vercel + GitHub + variables de entorno — `.env.example` completo; falta crear repo GitHub, conectar a Vercel y pegar env vars (acciones de Carlos)
 
 ### Fase 1 — MVP
-- [ ] Auth (Supabase Auth) + tabla `profiles` + middleware de roles
+- [X] Auth (Supabase Auth) + tabla `profiles` + middleware de roles — `proxy.ts` (Next 16), DAL `requireRole`, login/registro/logout, paneles `/dashboard` `/staff` `/superadmin`. Rutas: prefijo por rol.
 - [ ] CRUD negocios (alta de negocio + slug único)
 - [ ] CRUD servicios por negocio
 - [ ] CRUD staff + horarios (`availability_rules`, `availability_exceptions`)
