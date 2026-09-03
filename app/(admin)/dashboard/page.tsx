@@ -59,6 +59,12 @@ export default async function DashboardPage() {
             Servicios
           </Link>
           <Link
+            href="/dashboard/staff"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Staff
+          </Link>
+          <Link
             href="/dashboard/configuracion"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
@@ -71,7 +77,7 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle className="text-base">Próximos bloques de Fase 1</CardTitle>
           <CardDescription>
-            Staff y horarios, y luego el calendario de citas.
+            Horarios del staff, y luego el calendario de citas.
           </CardDescription>
         </CardHeader>
       </Card>
