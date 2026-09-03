@@ -11,15 +11,17 @@ export function AgendaNav({
   view,
   rangeLabel,
   today,
+  basePath,
 }: {
   date: string;
   view: "dia" | "semana";
   rangeLabel: string;
   today: string;
+  basePath: string;
 }) {
   const router = useRouter();
   const go = (d: string, v: "dia" | "semana") =>
-    router.push(`/dashboard/citas?d=${d}&v=${v}`);
+    router.push(`${basePath}?d=${d}&v=${v}`);
 
   const step = view === "semana" ? 7 : 1;
 

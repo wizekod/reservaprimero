@@ -45,5 +45,6 @@ export async function updateAppointmentStatus(
 
   // TODO(notificaciones): avisar al cliente si se confirma/cancela.
   revalidatePath("/dashboard/citas");
+  revalidatePath("/staff");
   return { ok: true };
 }
