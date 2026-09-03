@@ -189,6 +189,7 @@ export type Database = {
       businesses: {
         Row: {
           address: string | null
+          auto_confirm_bookings: boolean
           brand_color: string | null
           cancellation_notice_hours: number
           created_at: string
@@ -211,6 +212,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auto_confirm_bookings?: boolean
           brand_color?: string | null
           cancellation_notice_hours?: number
           created_at?: string
@@ -233,6 +235,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auto_confirm_bookings?: boolean
           brand_color?: string | null
           cancellation_notice_hours?: number
           created_at?: string

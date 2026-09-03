@@ -230,6 +230,17 @@ export function ConfiguracionForm({
                 />
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="auto_confirm_bookings"
+                defaultChecked={business.auto_confirm_bookings}
+                className="size-4"
+              />
+              Confirmar reservas automáticamente (si lo desactivas, quedan
+              pendientes de tu aprobación)
+            </label>
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={pending}>

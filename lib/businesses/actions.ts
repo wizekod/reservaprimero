@@ -75,6 +75,10 @@ const updateSchema = z.object({
     .int()
     .min(0, "Entre 0 y 720")
     .max(720, "Entre 0 y 720"),
+  auto_confirm_bookings: z.preprocess(
+    (v) => v === "on" || v === "true" || v === true,
+    z.boolean(),
+  ),
 });
 
 /** Alta de negocio: crea `businesses` + enlaza `profiles.business_id`. */
@@ -173,6 +177,7 @@ export async function updateBusinessSettings(
     max_booking_days: formData.get("max_booking_days"),
     slot_interval_minutes: formData.get("slot_interval_minutes"),
     cancellation_notice_hours: formData.get("cancellation_notice_hours"),
+    auto_confirm_bookings: formData.get("auto_confirm_bookings"),
   });
   if (!parsed.success) {
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
@@ -202,6 +207,7 @@ export async function updateBusinessSettings(
       max_booking_days: d.max_booking_days,
       slot_interval_minutes: d.slot_interval_minutes,
       cancellation_notice_hours: d.cancellation_notice_hours,
+      auto_confirm_bookings: d.auto_confirm_bookings,
     })
     .eq("id", business.id);
 

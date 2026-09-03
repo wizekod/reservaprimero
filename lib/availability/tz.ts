@@ -55,6 +55,14 @@ export function dayOfWeek(dateStr: string): number {
   return new Date(`${dateStr}T00:00:00Z`).getUTCDay();
 }
 
+/** Fecha "YYYY-MM-DD" de "ahora" en la zona horaria dada. */
+export function todayInTz(timeZone: string, instant: Date = new Date()): string {
+  const p = tzParts(instant, timeZone);
+  const mm = String(p.month).padStart(2, "0");
+  const dd = String(p.day).padStart(2, "0");
+  return `${p.year}-${mm}-${dd}`;
+}
+
 /** Suma `n` días a "YYYY-MM-DD" y devuelve "YYYY-MM-DD". */
 export function addDays(dateStr: string, n: number): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
