@@ -12,12 +12,21 @@ import {
   notifyBookingCancelled,
   notifyBookingRescheduled,
 } from "@/lib/notifications/dispatch";
+import { rateLimit } from "@/lib/security/rate-limit";
+import { clientIp } from "@/lib/security/request";
 
 type Result = { ok: boolean; error?: string };
 
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
+async function manageRateOk(): Promise<boolean> {
+  return rateLimit(`manage:${await clientIp()}`, 20, 60_000).ok;
+}
+
 export async function cancelByToken(token: string): Promise<Result> {
+  if (!(await manageRateOk())) {
+    return { ok: false, error: "Demasiados intentos. Espera un momento." };
+  }
   const appt = await getAppointmentByToken(token);
   if (!appt) return { ok: false, error: "Reserva no encontrada." };
   if (!appt.canModify) {
@@ -37,6 +46,7 @@ export async function cancelByToken(token: string): Promise<Result> {
 
 export async function fetchSlotsForReschedule(token: string, date: string) {
   if (!dateRe.test(date)) return { ok: false as const, reason: "bad_date" };
+  if (!(await manageRateOk())) return { ok: false as const, reason: "rate_limited" };
   const appt = await getAppointmentByToken(token);
   if (!appt || !appt.canModify) {
     return { ok: false as const, reason: "not_modifiable" };
@@ -66,6 +76,9 @@ export async function rescheduleByToken(
   token: string,
   newStartISO: string,
 ): Promise<Result & { manageUrl?: string; newToken?: string; startAt?: string }> {
+  if (!(await manageRateOk())) {
+    return { ok: false, error: "Demasiados intentos. Espera un momento." };
+  }
   const appt = await getAppointmentByToken(token);
   if (!appt) return { ok: false, error: "Reserva no encontrada." };
   if (!appt.canModify) {

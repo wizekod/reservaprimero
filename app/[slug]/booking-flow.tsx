@@ -9,6 +9,7 @@ import {
   type BookableStaff,
 } from "@/lib/booking/actions";
 import type { PublicService } from "@/lib/booking/queries";
+import { TurnstileWidget } from "@/components/security/turnstile-widget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +64,7 @@ export function BookingFlow({
   const [slot, setSlot] = useState<ChosenSlot | null>(null);
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
+  const [tsToken, setTsToken] = useState("");
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -122,6 +124,7 @@ export function BookingFlow({
         phone: form.phone,
         email: form.email,
         notes: form.notes,
+        turnstileToken: tsToken,
       });
       if (res.ok) {
         setResult({ status: res.status, manageUrl: res.manageUrl });
@@ -346,6 +349,7 @@ export function BookingFlow({
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
               />
             </div>
+            <TurnstileWidget onToken={setTsToken} />
             <Button
               type="button"
               onClick={submit}

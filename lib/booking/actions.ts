@@ -8,6 +8,9 @@ import { notifyBookingCreated } from "@/lib/notifications/dispatch";
 import { clientEnv } from "@/lib/env";
 import { getSlots } from "@/lib/availability/queries";
 import { todayInTz, addDays } from "@/lib/availability/tz";
+import { rateLimit } from "@/lib/security/rate-limit";
+import { clientIp } from "@/lib/security/request";
+import { verifyTurnstile } from "@/lib/security/turnstile";
 
 export type BookableStaff = { id: string; display_name: string };
 
@@ -60,6 +63,10 @@ export async function fetchSlots(
 ) {
   if (!dateRe.test(date)) return { ok: false as const, reason: "bad_date" };
 
+  if (!rateLimit(`slots:${await clientIp()}`, 120, 60_000).ok) {
+    return { ok: false as const, reason: "rate_limited" };
+  }
+
   const business = await resolveBusiness(slug);
   if (!business) return { ok: false as const, reason: "business_not_found" };
 
@@ -87,7 +94,6 @@ const bookingSchema = z.object({
     (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
     z.string().trim().max(500).optional(),
   ),
-  // TODO(anti-spam): token de Cloudflare Turnstile a verificar aquí.
   turnstileToken: z.string().optional(),
 });
 
@@ -110,8 +116,15 @@ export async function createBooking(
   }
   const b = parsed.data;
 
-  // TODO(anti-spam): verificar b.turnstileToken contra el endpoint de Cloudflare.
-  // TODO(anti-spam): rate limiting por IP en esta acción.
+  const ip = await clientIp();
+  if (!rateLimit(`booking:${ip}`, 6, 60_000).ok) {
+    return { ok: false, error: "Demasiados intentos. Espera un momento e inténtalo de nuevo." };
+  }
+  const ts = await verifyTurnstile(b.turnstileToken, ip);
+  if (!ts.ok) {
+    return { ok: false, error: "No pudimos verificar que no eres un bot. Recarga la página." };
+  }
+
   // TODO(plan): si el negocio está en plan Free, bloquear si supera el límite mensual.
 
   const admin = createAdminClient();
