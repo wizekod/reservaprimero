@@ -234,7 +234,7 @@ CRON_SECRET=
 - [X] Lógica de cálculo de disponibilidad (sin doble-booking, con constraint en DB) — `lib/availability/` (`computeAvailability` puro + `getSlots` server-side). Constraint `EXCLUDE gist` desde Fase 0. Parámetros por negocio en Configuración (antelación, horizonte, intervalo).
 - [~] Página pública de reserva `/[slug]` (flujo completo descrito en sección 6) — HECHO: flujo servicio→staff→slot→datos→confirmación, `createBooking` server-side con revalidación + find-or-create de customer + cancel_token + `auto_confirm_bookings`. PENDIENTE (sus propios bloques): Turnstile, rate limiting, límite plan Free, notificaciones.
 - [X] Cancelación/reagendado vía token sin login — `/reservas/[token]`: ver / cancelar / reagendar respetando `cancellation_notice_hours`; el `cancel_token` rota al reagendar.
-- [ ] Dashboard admin de negocio (calendario + CRUDs + configuración)
+- [~] Dashboard admin de negocio (calendario + CRUDs + configuración) — HECHO: CRUDs (servicios, staff, horarios), configuración, y agenda de citas `/dashboard/citas` (día/semana, acciones de estado). Nav lateral pendiente de pulir.
 - [ ] Dashboard staff (solo sus citas)
 - [ ] Dashboard superadmin (negocios, activar/suspender, planes)
 - [ ] Integración email (Resend) — confirmación + recordatorios
