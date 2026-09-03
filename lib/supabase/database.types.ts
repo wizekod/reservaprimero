@@ -716,3 +716,5 @@ export type AppointmentStatus = Enums<"appointment_status">;
 export type ProfileRow = Tables<"profiles">;
 export type BusinessRow = Tables<"businesses">;
 export type SubscriptionPlanRow = Tables<"subscription_plans">;
+export type ServiceRow = Tables<"services">;
+export type StaffMemberRow = Tables<"staff_members">;
