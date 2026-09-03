@@ -231,7 +231,7 @@ CRON_SECRET=
 - [X] CRUD negocios (alta de negocio + slug único) — `/onboarding` (crea `businesses` + enlaza `profiles.business_id` con service_role), `/dashboard/configuracion` (editar datos vía RLS), validación de slug en vivo. Nota: nuevos negocios entran como `trial` (14 días, plan Free) — ajustable en `lib/businesses/constants.ts`.
 - [X] CRUD servicios por negocio — `/dashboard/servicios` (+ `/nuevo`, `/[id]`): listar/crear/editar/activar-desactivar/eliminar vía RLS `services_admin_write`.
 - [X] CRUD staff + horarios (`availability_rules`, `availability_exceptions`) — `/dashboard/staff` (CRUD + `staff_services` + invitación por email → rol `staff` + panel) y `/dashboard/staff/[id]/horario` (franjas semanales + excepciones).
-- [ ] Lógica de cálculo de disponibilidad (sin doble-booking, con constraint en DB)
+- [X] Lógica de cálculo de disponibilidad (sin doble-booking, con constraint en DB) — `lib/availability/` (`computeAvailability` puro + `getSlots` server-side). Constraint `EXCLUDE gist` desde Fase 0. Parámetros por negocio en Configuración (antelación, horizonte, intervalo).
 - [ ] Página pública de reserva `/[slug]` (flujo completo descrito en sección 6)
 - [ ] Cancelación/reagendado vía token sin login
 - [ ] Dashboard admin de negocio (calendario + CRUDs + configuración)
