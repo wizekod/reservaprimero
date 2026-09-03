@@ -232,7 +232,7 @@ CRON_SECRET=
 - [X] CRUD servicios por negocio — `/dashboard/servicios` (+ `/nuevo`, `/[id]`): listar/crear/editar/activar-desactivar/eliminar vía RLS `services_admin_write`.
 - [X] CRUD staff + horarios (`availability_rules`, `availability_exceptions`) — `/dashboard/staff` (CRUD + `staff_services` + invitación por email → rol `staff` + panel) y `/dashboard/staff/[id]/horario` (franjas semanales + excepciones).
 - [X] Lógica de cálculo de disponibilidad (sin doble-booking, con constraint en DB) — `lib/availability/` (`computeAvailability` puro + `getSlots` server-side). Constraint `EXCLUDE gist` desde Fase 0. Parámetros por negocio en Configuración (antelación, horizonte, intervalo).
-- [ ] Página pública de reserva `/[slug]` (flujo completo descrito en sección 6)
+- [~] Página pública de reserva `/[slug]` (flujo completo descrito en sección 6) — HECHO: flujo servicio→staff→slot→datos→confirmación, `createBooking` server-side con revalidación + find-or-create de customer + cancel_token + `auto_confirm_bookings`. PENDIENTE (sus propios bloques): Turnstile, rate limiting, límite plan Free, notificaciones.
 - [ ] Cancelación/reagendado vía token sin login
 - [ ] Dashboard admin de negocio (calendario + CRUDs + configuración)
 - [ ] Dashboard staff (solo sus citas)
