@@ -53,6 +53,12 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 text-sm">
           <Link
+            href="/dashboard/citas"
+            className={buttonVariants({ size: "sm" })}
+          >
+            Citas
+          </Link>
+          <Link
             href="/dashboard/servicios"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
