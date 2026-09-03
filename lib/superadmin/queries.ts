@@ -75,7 +75,26 @@ export async function getPlatformMetrics() {
     countWhere("suspended"),
   ]);
 
-  return { total, active, trial, suspended, appointments: appointments ?? 0 };
+  // MRR estimado: nº de negocios con suscripción activa × precio del plan Premium.
+  const { data: premium } = await admin
+    .from("subscription_plans")
+    .select("price")
+    .eq("name", "Premium")
+    .maybeSingle();
+  const { count: paying } = await admin
+    .from("businesses")
+    .select("id", { count: "exact", head: true })
+    .in("subscription_status", ["active", "trialing"]);
+  const mrr = Math.round((paying ?? 0) * Number(premium?.price ?? 0));
+
+  return {
+    total,
+    active,
+    trial,
+    suspended,
+    appointments: appointments ?? 0,
+    mrr,
+  };
 }
 
 export async function listPlans() {

@@ -76,6 +76,12 @@ export default async function DashboardPage() {
           >
             Configuración del negocio
           </Link>
+          <Link
+            href="/dashboard/suscripcion"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Suscripción
+          </Link>
         </CardContent>
       </Card>
 

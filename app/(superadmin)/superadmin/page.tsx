@@ -53,12 +53,13 @@ export default async function SuperadminPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
         <Metric label="Negocios" value={metrics.total} />
         <Metric label="Activos" value={metrics.active} />
         <Metric label="En prueba" value={metrics.trial} />
         <Metric label="Suspendidos" value={metrics.suspended} />
         <Metric label="Citas" value={metrics.appointments} />
+        <Metric label="MRR estimado" value={metrics.mrr} />
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
