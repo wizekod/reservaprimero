@@ -314,6 +314,7 @@ export type Database = {
           created_at: string
           error: string | null
           id: string
+          recipient: string
           reminder_offset_minutes: number | null
           sent_at: string | null
           status: Database["public"]["Enums"]["notification_status"]
@@ -325,6 +326,7 @@ export type Database = {
           created_at?: string
           error?: string | null
           id?: string
+          recipient?: string
           reminder_offset_minutes?: number | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["notification_status"]
@@ -336,6 +338,7 @@ export type Database = {
           created_at?: string
           error?: string | null
           id?: string
+          recipient?: string
           reminder_offset_minutes?: number | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["notification_status"]
