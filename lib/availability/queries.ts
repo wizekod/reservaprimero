@@ -10,6 +10,8 @@ export type GetSlotsParams = {
   dateFrom: string; // "YYYY-MM-DD" (hora local del negocio)
   dateTo: string; // inclusive
   now?: Date;
+  /** Cita a ignorar al calcular "ocupado" (para reagendar sin chocar consigo misma). */
+  excludeAppointmentId?: string;
 };
 
 export type SlotsResult =
@@ -86,13 +88,17 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
   const busyTo = new Date(`${p.dateTo}T00:00:00Z`);
   busyTo.setUTCDate(busyTo.getUTCDate() + 2);
 
-  const { data: appts } = await admin
+  let apptQuery = admin
     .from("appointments")
-    .select("staff_member_id, start_at, end_at")
+    .select("id, staff_member_id, start_at, end_at")
     .in("staff_member_id", staffIds)
     .in("status", ["pending", "confirmed"])
     .gte("start_at", busyFrom.toISOString())
     .lt("start_at", busyTo.toISOString());
+  if (p.excludeAppointmentId) {
+    apptQuery = apptQuery.neq("id", p.excludeAppointmentId);
+  }
+  const { data: appts } = await apptQuery;
 
   const slots = computeAvailability({
     now: p.now ?? new Date(),

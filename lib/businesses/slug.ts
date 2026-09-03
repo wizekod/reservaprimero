@@ -27,6 +27,7 @@ export const RESERVED_SLUGS = new Set<string>([
   "webhooks",
   // añadidas tras CLAUDE.md §3:
   "onboarding",
+  "reservas",
   "_next",
   "favicon.ico",
 ]);
