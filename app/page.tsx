@@ -76,7 +76,7 @@ export default function Home() {
             <Sparkles className="size-3.5 text-primary" />
             Agenda online para negocios de servicios
           </span>
-          <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">
+          <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
             Tus clientes reservan solos,{" "}
             <span className="text-gradient">tú te dedicas a atender</span>
           </h1>
