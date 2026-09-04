@@ -11,13 +11,6 @@ import type { ManagedAppointment } from "@/lib/booking/manage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 const STATUS_TEXT: Record<ManagedAppointment["status"], string> = {
   pending: "Pendiente de confirmación",
@@ -88,18 +81,33 @@ export function ManageView({
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle>Tu reserva en {appt.businessName}</CardTitle>
-          <CardDescription>{STATUS_TEXT[status]}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="text-sm">
-            <p className="font-medium">{appt.serviceName}</p>
-            <p>{whenText}</p>
-            <p className="text-muted-foreground">con {appt.staffName}</p>
-          </div>
+    <div className="bg-aurora min-h-svh">
+      <div className="mx-auto max-w-md px-4 py-14">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <p className="text-sm text-muted-foreground">
+            Tu reserva en{" "}
+            <span className="font-medium text-foreground">
+              {appt.businessName}
+            </span>
+          </p>
+          <h1 className="mt-1 text-lg font-semibold capitalize">
+            {appt.serviceName}
+          </h1>
+          <p className="text-sm text-muted-foreground">{whenText}</p>
+          <p className="text-sm text-muted-foreground">con {appt.staffName}</p>
+          <span
+            className={`mt-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              status === "cancelled"
+                ? "bg-muted text-muted-foreground"
+                : status === "confirmed"
+                  ? "bg-emerald-500/15 text-emerald-700"
+                  : "bg-amber-500/15 text-amber-700"
+            }`}
+          >
+            {STATUS_TEXT[status]}
+          </span>
+
+          <div className="mt-4 grid gap-4">
 
           {error ? (
             <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -193,8 +201,9 @@ export function ManageView({
               </button>
             </div>
           )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

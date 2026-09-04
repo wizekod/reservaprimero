@@ -18,17 +18,19 @@ export default async function ManageReservationPage({
 
   if (!appt) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="text-xl font-semibold">No encontramos esta reserva</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          El enlace puede ser incorrecto o la reserva ya no existe.
-        </p>
-        <Link
-          href="/"
-          className="mt-4 inline-block text-sm underline underline-offset-4"
-        >
-          Ir al inicio
-        </Link>
+      <div className="bg-aurora flex min-h-svh flex-col items-center justify-center px-4 text-center">
+        <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+          <h1 className="text-xl font-semibold">No encontramos esta reserva</h1>
+          <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+            El enlace puede ser incorrecto o la reserva ya no existe.
+          </p>
+          <Link
+            href="/"
+            className="mt-4 inline-block text-sm font-medium text-primary hover:underline"
+          >
+            Ir al inicio
+          </Link>
+        </div>
       </div>
     );
   }
