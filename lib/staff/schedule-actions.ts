@@ -123,3 +123,71 @@ export async function deleteException(
   revalidatePath(`/dashboard/staff/${staffId}/horario`);
   return { ok: true };
 }
+
+/**
+ * Bloquea una fecha (o una franja) para un profesional o para todo el equipo.
+ * `staffId === "all"` aplica a todos los activos del negocio.
+ */
+export async function blockTime(
+  staffId: string,
+  input: unknown,
+): Promise<Result & { skipped?: number }> {
+  const business = await getMyBusiness();
+  if (!business) return { ok: false, error: "No autorizado." };
+
+  const parsed = exceptionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error:
+        z.flattenError(parsed.error).formErrors[0] ??
+        "Revisa la fecha y el horario.",
+    };
+  }
+  const e = parsed.data;
+
+  const supabase = await createClient();
+  let targets: string[];
+
+  if (staffId === "all") {
+    const { data } = await supabase
+      .from("staff_members")
+      .select("id")
+      .eq("business_id", business.id)
+      .eq("active", true);
+    targets = (data ?? []).map((s) => s.id);
+  } else {
+    if (!(await assertOwnsStaff(staffId))) {
+      return { ok: false, error: "No autorizado." };
+    }
+    targets = [staffId];
+  }
+
+  if (targets.length === 0) {
+    return { ok: false, error: "No hay profesionales activos." };
+  }
+
+  let inserted = 0;
+  let skipped = 0;
+  for (const id of targets) {
+    const { error } = await supabase.from("availability_exceptions").insert({
+      staff_member_id: id,
+      date: e.date,
+      is_closed: e.is_closed,
+      start_time: e.is_closed || !e.start ? null : e.start,
+      end_time: e.is_closed || !e.end ? null : e.end,
+    });
+    if (error) {
+      if (error.code === "23505") skipped += 1;
+      else return { ok: false, error: "No se pudo guardar el bloqueo." };
+    } else {
+      inserted += 1;
+    }
+  }
+
+  revalidatePath("/dashboard/bloquear-horario");
+  if (inserted === 0) {
+    return { ok: false, error: "Ya existe un bloqueo para esa fecha." };
+  }
+  return { ok: true, skipped };
+}

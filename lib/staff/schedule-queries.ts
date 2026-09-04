@@ -47,3 +47,33 @@ export async function listExceptions(
     .order("date", { ascending: false });
   return data ?? [];
 }
+
+export type BusinessException = AvailabilityExceptionRow & { staffName: string };
+
+/** Excepciones (bloqueos) de todo el equipo, desde `fromDate` en adelante. */
+export async function listBusinessExceptions(
+  fromDate: string,
+): Promise<BusinessException[]> {
+  const business = await getMyBusiness();
+  if (!business) return [];
+
+  const supabase = await createClient();
+  const { data: staff } = await supabase
+    .from("staff_members")
+    .select("id, display_name")
+    .eq("business_id", business.id);
+  const names = new Map((staff ?? []).map((s) => [s.id, s.display_name]));
+  if (names.size === 0) return [];
+
+  const { data } = await supabase
+    .from("availability_exceptions")
+    .select("*")
+    .in("staff_member_id", [...names.keys()])
+    .gte("date", fromDate)
+    .order("date");
+
+  return (data ?? []).map((e) => ({
+    ...e,
+    staffName: names.get(e.staff_member_id) ?? "—",
+  }));
+}
