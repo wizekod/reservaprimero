@@ -71,7 +71,7 @@ export function PanelShell({
   return (
     <div className="flex min-h-svh flex-col bg-muted/30 lg:flex-row">
       {/* Sidebar desktop */}
-      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r border-border bg-sidebar lg:flex">
+      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col border-r border-border bg-sidebar print:hidden lg:flex">
         <div className="flex h-14 items-center gap-2 border-b border-border px-4">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <CalendarCheck className="size-4" />
@@ -88,12 +88,12 @@ export function PanelShell({
       </aside>
 
       {/* Barra superior móvil */}
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur print:hidden lg:hidden">
         <MobileDrawer nav={rendered} footer={footer} />
         <div className="min-w-0 flex-1">{brandBlock}</div>
       </header>
 
-      <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+      <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-8 print:p-0">
         {children}
       </main>
     </div>

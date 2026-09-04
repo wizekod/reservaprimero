@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getMyBusiness } from "@/lib/businesses/queries";
 import { clientEnv } from "@/lib/env";
 
+import { QrCard } from "@/components/businesses/qr-card";
+
 import { ConfiguracionForm } from "./configuracion-form";
 
 export const metadata: Metadata = { title: "Configuración · ReservaPrimero" };
@@ -13,5 +15,12 @@ export default async function ConfiguracionPage() {
   if (!business) redirect("/onboarding");
 
   const hostBase = new URL(clientEnv.NEXT_PUBLIC_APP_URL).host;
-  return <ConfiguracionForm business={business} hostBase={hostBase} />;
+  return (
+    <div className="space-y-5">
+      <ConfiguracionForm business={business} hostBase={hostBase} />
+      <div className="mx-auto max-w-2xl">
+        <QrCard slug={business.slug} />
+      </div>
+    </div>
+  );
 }
