@@ -63,6 +63,29 @@ export function todayInTz(timeZone: string, instant: Date = new Date()): string 
   return `${p.year}-${mm}-${dd}`;
 }
 
+/** Fecha local y minutos desde medianoche de un instante ISO, en la zona dada. */
+export function zonedDateAndMinutes(
+  iso: string,
+  timeZone: string,
+): { date: string; minutes: number } {
+  const p = tzParts(new Date(iso), timeZone);
+  const mm = String(p.month).padStart(2, "0");
+  const dd = String(p.day).padStart(2, "0");
+  return { date: `${p.year}-${mm}-${dd}`, minutes: p.hour * 60 + p.minute };
+}
+
+/** Primer día del mes de `dateStr` ("YYYY-MM-01"). */
+export function startOfMonth(dateStr: string): string {
+  return `${dateStr.slice(0, 7)}-01`;
+}
+
+/** Suma `n` meses a "YYYY-MM-DD", devolviendo el día 1 del mes resultante. */
+export function addMonths(dateStr: string, n: number): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  const d = new Date(Date.UTC(y!, m! - 1 + n, 1));
+  return d.toISOString().slice(0, 10);
+}
+
 /** Suma `n` días a "YYYY-MM-DD" y devuelve "YYYY-MM-DD". */
 export function addDays(dateStr: string, n: number): string {
   const d = new Date(`${dateStr}T00:00:00Z`);

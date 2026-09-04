@@ -10,7 +10,9 @@ export type AgendaAppointment = {
   startAt: string;
   endAt: string;
   notes: string | null;
+  staffMemberId: string;
   serviceName: string;
+  servicePrice: number;
   serviceColor: string | null;
   staffName: string;
   customerName: string;
@@ -32,8 +34,8 @@ export async function listAppointments(
   const { data } = await supabase
     .from("appointments")
     .select(
-      `id, status, start_at, end_at, notes,
-       services ( name, color ),
+      `id, status, start_at, end_at, notes, staff_member_id,
+       services ( name, color, price ),
        staff_members ( display_name ),
        customers ( name, phone )`,
     )
@@ -52,11 +54,29 @@ export async function listAppointments(
       startAt: row.start_at,
       endAt: row.end_at,
       notes: row.notes,
+      staffMemberId: row.staff_member_id,
       serviceName: service?.name ?? "—",
+      servicePrice: Number(service?.price ?? 0),
       serviceColor: service?.color ?? null,
       staffName: staff?.display_name ?? "—",
       customerName: customer?.name ?? "—",
       customerPhone: customer?.phone ?? null,
     };
   });
+}
+
+/** Staff activo del negocio actual (para filtros del calendario). */
+export async function listStaffOptions(): Promise<
+  { id: string; name: string }[]
+> {
+  const business = await getMyBusiness();
+  if (!business) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("staff_members")
+    .select("id, display_name")
+    .eq("business_id", business.id)
+    .eq("active", true)
+    .order("display_name");
+  return (data ?? []).map((s) => ({ id: s.id, name: s.display_name }));
 }
