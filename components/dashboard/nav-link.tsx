@@ -11,18 +11,23 @@ export function NavLink({
   label,
   icon,
   compact,
+  onNavigate,
 }: {
   href: string;
   label: string;
   icon: ReactNode;
   compact?: boolean;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(`${href}/`);
+  const active =
+    pathname === href ||
+    (href !== "/dashboard" && pathname.startsWith(`${href}/`));
 
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={cn(
         "flex items-center gap-2 rounded-lg text-sm font-medium transition-colors",
         compact ? "shrink-0 whitespace-nowrap px-3 py-1.5" : "px-3 py-2",
