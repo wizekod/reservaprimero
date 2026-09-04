@@ -234,7 +234,7 @@ CRON_SECRET=
 - [X] Lógica de cálculo de disponibilidad (sin doble-booking, con constraint en DB) — `lib/availability/` (`computeAvailability` puro + `getSlots` server-side). Constraint `EXCLUDE gist` desde Fase 0. Parámetros por negocio en Configuración (antelación, horizonte, intervalo).
 - [X] Página pública de reserva `/[slug]` — flujo completo + `createBooking` server-side (revalidación, find-or-create customer, cancel_token, `auto_confirm_bookings`, rate limit, Turnstile, notificaciones, límite plan Free).
 - [X] Cancelación/reagendado vía token sin login — `/reservas/[token]`: ver / cancelar / reagendar respetando `cancellation_notice_hours`; el `cancel_token` rota al reagendar.
-- [X] Dashboard admin de negocio — CRUDs (servicios, staff, horarios), configuración, agenda de citas `/dashboard/citas` (día/semana), y suscripción `/dashboard/suscripcion`.
+- [X] Dashboard admin de negocio — sidebar responsivo (cajón en móvil) con: Inicio · Nueva Reserva · Calendario (rejilla horaria día/semana + mes) · Estadísticas · Servicios · Staff · Bloquear horario · Mi suscripción · Configuración. Sin MercadoPago/Extras/Transferencias por decisión de Carlos.
 - [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar completada/no-show/cancelada/confirmada.
 - [X] Dashboard superadmin (negocios, activar/suspender, planes) — `/superadmin` (métricas + tabla de negocios + suspender/reactivar) y `/superadmin/planes` (editar planes). MRR vía Stripe queda para el bloque de Stripe.
 - [~] Integración email (Resend) — confirmación + recordatorios — código completo en modo protegido (no-op sin `RESEND_API_KEY`); enganchado a reserva/confirmación/cancelación/reagendado/recordatorio. Falta pegar credenciales.
@@ -246,7 +246,7 @@ CRON_SECRET=
 
 ### Fase 2
 - [ ] Google Calendar sync (OAuth por staff)
-- [ ] Estadísticas/reportes en dashboard admin
+- [~] Estadísticas/reportes en dashboard admin — versión básica ya en `/dashboard/estadisticas` (citas por estado, facturación estimada, top servicios, tasa de asistencia). Faltan gráficos y comparativas.
 - [ ] CRM ligero de clientes
 - [ ] Widget embebible
 - [ ] Webhook Discord/Slack para notificación interna
