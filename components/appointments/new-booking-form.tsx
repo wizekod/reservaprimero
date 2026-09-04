@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { capitalizeFirst, cn } from "@/lib/utils";
 
 type Slot = { start: string; staffMemberId: string };
 
@@ -126,12 +126,14 @@ export function NewBookingForm({
       timeZone: tz,
     });
   const dateChip = (d: string) =>
-    new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-    });
+    capitalizeFirst(
+      new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      }),
+    );
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -206,7 +208,7 @@ export function NewBookingForm({
                 <ChevronLeft className="size-4" />
               </Button>
               <label className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium capitalize">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium">
                   {dateChip(date)}
                 </span>
                 <Input
@@ -304,7 +306,7 @@ export function NewBookingForm({
             </div>
 
             {slot ? (
-              <p className="rounded-lg bg-muted px-3 py-2 text-xs capitalize text-muted-foreground">
+              <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
                 {service?.name} · {dateChip(date)} · {timeFmt(slot.start)}
               </p>
             ) : null}

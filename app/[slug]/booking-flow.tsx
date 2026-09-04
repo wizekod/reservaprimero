@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { capitalizeFirst, cn } from "@/lib/utils";
 
 type Business = {
   name: string;
@@ -167,19 +167,23 @@ export function BookingFlow({
       timeZone: tz,
     });
   const dateLongFmt = (iso: string) =>
-    new Date(iso).toLocaleDateString("es", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      timeZone: tz,
-    });
+    capitalizeFirst(
+      new Date(iso).toLocaleDateString("es", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: tz,
+      }),
+    );
   const dateChipFmt = (d: string) =>
-    new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-    });
+    capitalizeFirst(
+      new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      }),
+    );
 
   const staffName = staffId
     ? (staffList.find((s) => s.id === staffId)?.display_name ?? "")
@@ -341,7 +345,7 @@ export function BookingFlow({
                   <ChevronLeft className="size-4" />
                 </Button>
                 <label className="relative flex-1">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium capitalize">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium">
                     {dateChipFmt(date)}
                   </span>
                   <Input
@@ -398,7 +402,7 @@ export function BookingFlow({
             <section className="space-y-4">
               <div>
                 <h2 className="font-semibold">Tus datos</h2>
-                <p className="text-sm capitalize text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {service?.name} · {dateLongFmt(slot.start)} · {timeFmt(slot.start)}
                 </p>
               </div>
@@ -481,7 +485,7 @@ export function BookingFlow({
 
               <div className="rounded-xl border border-border bg-muted/40 p-4 text-left text-sm">
                 <p className="font-medium">{service?.name}</p>
-                <p className="capitalize text-muted-foreground">
+                <p className="text-muted-foreground">
                   {dateLongFmt(slot.start)} · {timeFmt(slot.start)}
                 </p>
                 <p className="text-muted-foreground">con {staffName}</p>

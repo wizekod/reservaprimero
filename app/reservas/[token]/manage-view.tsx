@@ -11,6 +11,7 @@ import type { ManagedAppointment } from "@/lib/booking/manage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { capitalizeFirst } from "@/lib/utils";
 
 const STATUS_TEXT: Record<ManagedAppointment["status"], string> = {
   pending: "Pendiente de confirmación",
@@ -44,7 +45,9 @@ export function ManageView({
 
   const dtf = (iso: string, opts: Intl.DateTimeFormatOptions) =>
     new Date(iso).toLocaleString("es", { ...opts, timeZone: appt.timeZone });
-  const whenText = `${dtf(startAt, { weekday: "long", day: "numeric", month: "long" })} · ${dtf(startAt, { hour: "2-digit", minute: "2-digit" })}`;
+  const whenText = capitalizeFirst(
+    `${dtf(startAt, { weekday: "long", day: "numeric", month: "long" })} · ${dtf(startAt, { hour: "2-digit", minute: "2-digit" })}`,
+  );
 
   function loadSlots(d: string) {
     setSlotsLoaded(false);
@@ -90,7 +93,7 @@ export function ManageView({
               {appt.businessName}
             </span>
           </p>
-          <h1 className="mt-1 text-lg font-semibold capitalize">
+          <h1 className="mt-1 text-lg font-semibold">
             {appt.serviceName}
           </h1>
           <p className="text-sm text-muted-foreground">{whenText}</p>

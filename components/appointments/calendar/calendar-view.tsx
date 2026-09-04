@@ -9,7 +9,7 @@ import { STATUS_BADGE, STATUS_LABEL } from "@/lib/appointments/status";
 import { addDays, addMonths, zonedDateAndMinutes } from "@/lib/availability/tz";
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { capitalizeFirst, cn } from "@/lib/utils";
 
 export type CalendarView = "dia" | "semana" | "mes";
 
@@ -146,10 +146,12 @@ export function CalendarView({
   const gridHeight = (endHour - startHour) * HOUR_PX;
 
   const dayLabel = (d: string, opts: Intl.DateTimeFormatOptions) =>
-    new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
-      ...opts,
-      timeZone: "UTC",
-    });
+    capitalizeFirst(
+      new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
+        ...opts,
+        timeZone: "UTC",
+      }),
+    );
 
   return (
     <div className="space-y-4">
@@ -182,8 +184,8 @@ export function CalendarView({
           >
             <ChevronRight className="size-4" />
           </Button>
-          <h2 className="ml-2 truncate text-base font-semibold capitalize sm:text-lg">
-            {rangeLabel}
+          <h2 className="ml-2 truncate text-base font-semibold sm:text-lg">
+            {capitalizeFirst(rangeLabel)}
           </h2>
         </div>
 
@@ -274,7 +276,7 @@ export function CalendarView({
                 >
                   <div
                     className={cn(
-                      "flex h-10 items-center justify-center gap-1 border-b border-border text-xs font-medium capitalize",
+                      "flex h-10 items-center justify-center gap-1 border-b border-border text-xs font-medium",
                       isToday ? "text-primary" : "text-muted-foreground",
                     )}
                   >
@@ -328,9 +330,11 @@ export function CalendarView({
                           <span className="block truncate font-medium">
                             {hhmm(p.start)} {p.appt.customerName}
                           </span>
-                          <span className="block truncate opacity-80">
-                            {p.appt.serviceName}
-                          </span>
+                          {height >= 36 ? (
+                            <span className="block truncate opacity-80">
+                              {p.appt.serviceName}
+                            </span>
+                          ) : null}
                         </button>
                       );
                     })}
@@ -468,14 +472,16 @@ function DetailSheet({
   timeZone: string;
   onClose: () => void;
 }) {
-  const when = new Date(appt.startAt).toLocaleString("es", {
-    timeZone,
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const when = capitalizeFirst(
+    new Date(appt.startAt).toLocaleString("es", {
+      timeZone,
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  );
 
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center">
@@ -496,7 +502,7 @@ function DetailSheet({
           {STATUS_LABEL[appt.status]}
         </span>
         <h3 className="mt-2 text-lg font-semibold">{appt.serviceName}</h3>
-        <p className="text-sm capitalize text-muted-foreground">{when}</p>
+        <p className="text-sm text-muted-foreground">{when}</p>
 
         <dl className="mt-4 space-y-1.5 text-sm">
           <Row label="Cliente" value={appt.customerName} />
