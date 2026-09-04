@@ -86,7 +86,7 @@ export default async function EstadisticasPage({
             name="desde"
             defaultValue={desde}
             max={hasta}
-            className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm"
+            className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm"
           />
         </label>
         <label className="grid gap-1.5 text-sm">
@@ -95,12 +95,12 @@ export default async function EstadisticasPage({
             type="date"
             name="hasta"
             defaultValue={hasta}
-            className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm"
+            className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm"
           />
         </label>
         <button
           type="submit"
-          className="h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+          className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
         >
           Aplicar
         </button>

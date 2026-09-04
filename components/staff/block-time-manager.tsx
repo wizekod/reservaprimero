@@ -10,17 +10,20 @@ import type { BusinessException } from "@/lib/staff/schedule-queries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { capitalizeFirst } from "@/lib/utils";
 
 const hhmm = (t: string) => t.slice(0, 5);
 
 const fmtDate = (d: string) =>
-  new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  capitalizeFirst(
+    new Date(`${d}T12:00:00Z`).toLocaleDateString("es", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    }),
+  );
 
 export function BlockTimeManager({
   staff,
@@ -81,7 +84,7 @@ export function BlockTimeManager({
               id="staff"
               value={staffId}
               onChange={(e) => setStaffId(e.target.value)}
-              className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm"
+              className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm"
             >
               <option value="all">Todo el equipo</option>
               {staff.map((s) => (
@@ -159,7 +162,7 @@ export function BlockTimeManager({
                 className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium capitalize">
+                  <p className="truncate font-medium">
                     {fmtDate(e.date)}
                   </p>
                   <p className="text-muted-foreground">

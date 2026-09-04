@@ -201,7 +201,7 @@ export function ConfiguracionForm({
                   id="slot_interval_minutes"
                   name="slot_interval_minutes"
                   defaultValue={business.slot_interval_minutes}
-                  className="h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 >
                   {[5, 10, 15, 20, 30, 60].map((v) => (
                     <option key={v} value={v}>
