@@ -5,27 +5,19 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { updateAppointmentStatus } from "@/lib/appointments/actions";
+import {
+  APPOINTMENT_STATUSES,
+  STATUS_DOT,
+  STATUS_LABEL,
+} from "@/lib/appointments/status";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-const NEXT_ACTIONS: Record<
-  AppointmentStatus,
-  { label: string; to: AppointmentStatus; danger?: boolean }[]
-> = {
-  pending: [
-    { label: "Confirmar", to: "confirmed" },
-    { label: "Cancelar", to: "cancelled", danger: true },
-  ],
-  confirmed: [
-    { label: "Completada", to: "completed" },
-    { label: "No asistió", to: "no_show" },
-    { label: "Cancelar", to: "cancelled", danger: true },
-  ],
-  completed: [],
-  cancelled: [],
-  no_show: [],
-};
-
+/**
+ * Cambio de estado. Se ofrecen siempre todos los estados distintos al actual:
+ * el negocio tiene que poder corregir una cita ya completada o revivir una
+ * cancelada. Cancelar pide confirmación porque avisa al cliente.
+ */
 export function AppointmentActions({
   id,
   status,
@@ -37,38 +29,42 @@ export function AppointmentActions({
   const [pending, startTransition] = useTransition();
   const [confirmCancel, setConfirmCancel] = useState(false);
 
-  const actions = NEXT_ACTIONS[status];
-  if (actions.length === 0) return null;
-
-  function run(to: AppointmentStatus, danger?: boolean) {
-    if (danger && !confirmCancel) {
+  function run(next: AppointmentStatus) {
+    if (next === "cancelled" && !confirmCancel) {
       setConfirmCancel(true);
       setTimeout(() => setConfirmCancel(false), 4000);
       return;
     }
     startTransition(async () => {
-      const res = await updateAppointmentStatus(id, to);
+      const res = await updateAppointmentStatus(id, next);
       if (res.ok) router.refresh();
       else toast.error(res.error ?? "Error");
       setConfirmCancel(false);
     });
   }
 
+  const options = APPOINTMENT_STATUSES.filter((s) => s !== status);
+
   return (
-    <div className="flex flex-wrap gap-1">
-      {actions.map((a) => (
-        <Button
-          key={a.to}
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={pending}
-          className={a.danger ? "text-destructive" : undefined}
-          onClick={() => run(a.to, a.danger)}
-        >
-          {a.danger && confirmCancel ? "¿Seguro?" : a.label}
-        </Button>
-      ))}
+    <div className="space-y-1.5">
+      <p className="text-xs text-muted-foreground">Cambiar estado a</p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((s) => (
+          <button
+            key={s}
+            type="button"
+            disabled={pending}
+            onClick={() => run(s)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50",
+              s === "cancelled" && confirmCancel && "border-destructive text-destructive",
+            )}
+          >
+            <span className={cn("size-2 rounded-full", STATUS_DOT[s])} />
+            {s === "cancelled" && confirmCancel ? "¿Seguro?" : STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

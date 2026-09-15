@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
 import { getMyBusiness } from "@/lib/businesses/queries";
+import { APPOINTMENT_STATUSES } from "@/lib/appointments/status";
 import { getSlots } from "@/lib/availability/queries";
 import { todayInTz } from "@/lib/availability/tz";
 import { emptyToUndefined } from "@/lib/forms";
@@ -18,20 +19,25 @@ import {
 
 type Result = { ok: boolean; error?: string };
 
-const ALLOWED: Record<AppointmentStatus, AppointmentStatus[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["completed", "no_show", "cancelled"],
-  completed: [],
-  cancelled: [],
-  no_show: [],
-};
-
+/**
+ * Cambia el estado de una cita. Cualquier estado puede pasar a cualquier otro:
+ * el negocio debe poder corregirse (marcar completada por error, revivir una
+ * cancelada, etc.).
+ *
+ * Ojo: sólo `pending` y `confirmed` entran en el constraint anti-doble-booking,
+ * así que reactivar una cita puede chocar con otra que ocupó el hueco mientras
+ * tanto. Ese caso se detecta (23P01) y se explica.
+ */
 export async function updateAppointmentStatus(
   id: string,
   next: AppointmentStatus,
 ): Promise<Result> {
   const business = await getMyBusiness();
   if (!business) return { ok: false, error: "No autorizado." };
+
+  if (!APPOINTMENT_STATUSES.includes(next)) {
+    return { ok: false, error: "Estado inválido." };
+  }
 
   const supabase = await createClient();
   const { data: current } = await supabase
@@ -41,17 +47,24 @@ export async function updateAppointmentStatus(
     .eq("business_id", business.id)
     .maybeSingle();
   if (!current) return { ok: false, error: "Cita no encontrada." };
-
-  if (!ALLOWED[current.status].includes(next)) {
-    return { ok: false, error: "Cambio de estado no permitido." };
-  }
+  if (current.status === next) return { ok: true };
 
   const { error } = await supabase
     .from("appointments")
     .update({ status: next })
     .eq("id", id)
     .eq("business_id", business.id);
-  if (error) return { ok: false, error: "No se pudo actualizar." };
+
+  if (error) {
+    if (error.code === "23P01") {
+      return {
+        ok: false,
+        error:
+          "No se puede reactivar: otra cita ya ocupa ese horario con el mismo profesional.",
+      };
+    }
+    return { ok: false, error: "No se pudo actualizar." };
+  }
 
   if (next === "confirmed") after(() => notifyBookingConfirmed(id));
   if (next === "cancelled") after(() => notifyBookingCancelled(id));

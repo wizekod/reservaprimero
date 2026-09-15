@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import type { AgendaAppointment } from "@/lib/appointments/queries";
-import { STATUS_BADGE, STATUS_LABEL } from "@/lib/appointments/status";
+import {
+  APPOINTMENT_STATUSES,
+  STATUS_BADGE,
+  STATUS_BLOCK,
+  STATUS_DOT,
+  STATUS_LABEL,
+} from "@/lib/appointments/status";
 import { addDays, addMonths, zonedDateAndMinutes } from "@/lib/availability/tz";
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
 import { Button } from "@/components/ui/button";
@@ -92,7 +98,9 @@ export function CalendarView({
 }) {
   const router = useRouter();
   const [staffId, setStaffId] = useState<string>("all");
-  const [selected, setSelected] = useState<AgendaAppointment | null>(null);
+  // Se guarda el id, no la cita: así el panel de detalle refleja el estado
+  // actualizado cuando router.refresh() vuelve a traer las citas.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const go = (d: string, v: CalendarView) =>
     router.push(`${basePath}?d=${d}&v=${v}`);
@@ -101,6 +109,11 @@ export function CalendarView({
     if (view === "mes") return go(addMonths(monthAnchor, dir), view);
     return go(addDays(date, dir * (view === "semana" ? 7 : 1)), view);
   };
+
+  const selected = useMemo(
+    () => appointments.find((a) => a.id === selectedId) ?? null,
+    [appointments, selectedId],
+  );
 
   const visible = useMemo(
     () =>
@@ -232,6 +245,19 @@ export function CalendarView({
         </div>
       ) : null}
 
+      {/* Leyenda de estados */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        {APPOINTMENT_STATUSES.map((s) => (
+          <span
+            key={s}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+          >
+            <span className={cn("size-2 rounded-full", STATUS_DOT[s])} />
+            {STATUS_LABEL[s]}
+          </span>
+        ))}
+      </div>
+
       {/* Rejilla */}
       {view === "mes" ? (
         <MonthGrid
@@ -301,34 +327,33 @@ export function CalendarView({
                         (p.end - p.start) * (HOUR_PX / 60) - 2,
                         20,
                       );
-                      const cancelled =
-                        p.appt.status === "cancelled" ||
-                        p.appt.status === "no_show";
                       return (
                         <button
                           key={p.appt.id}
                           type="button"
-                          onClick={() => setSelected(p.appt)}
+                          title={`${STATUS_LABEL[p.appt.status]} · ${p.appt.serviceName}`}
+                          onClick={() => setSelectedId(p.appt.id)}
                           className={cn(
                             "absolute overflow-hidden rounded-md border px-1.5 py-1 text-left text-[11px] leading-tight transition-shadow hover:shadow-md",
-                            cancelled
-                              ? "border-border bg-muted text-muted-foreground line-through"
-                              : "border-primary/30 bg-primary/10 text-foreground",
+                            STATUS_BLOCK[p.appt.status],
                           )}
                           style={{
                             top,
                             height,
                             left: `calc(${(p.lane / p.lanes) * 100}% + 2px)`,
                             width: `calc(${100 / p.lanes}% - 4px)`,
-                            borderLeftWidth: 3,
-                            borderLeftColor:
-                              !cancelled && p.appt.serviceColor
-                                ? p.appt.serviceColor
-                                : undefined,
                           }}
                         >
-                          <span className="block truncate font-medium">
-                            {hhmm(p.start)} {p.appt.customerName}
+                          <span className="flex items-center gap-1 truncate font-medium">
+                            {p.appt.serviceColor ? (
+                              <span
+                                className="size-1.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: p.appt.serviceColor }}
+                              />
+                            ) : null}
+                            <span className="truncate">
+                              {hhmm(p.start)} {p.appt.customerName}
+                            </span>
                           </span>
                           {height >= 36 ? (
                             <span className="block truncate opacity-80">
@@ -350,7 +375,7 @@ export function CalendarView({
         <DetailSheet
           appt={selected}
           timeZone={timeZone}
-          onClose={() => setSelected(null)}
+          onClose={() => setSelectedId(null)}
         />
       ) : null}
     </div>
@@ -439,9 +464,17 @@ function MonthGrid({
                 {items.slice(0, 2).map((it) => (
                   <span
                     key={it.appt.id}
-                    className="block truncate rounded bg-primary/10 px-1 text-[10px] text-foreground"
+                    className="flex items-center gap-1 truncate px-1 text-[10px] text-foreground"
                   >
-                    {hhmm(it.start)} {it.appt.customerName}
+                    <span
+                      className={cn(
+                        "size-1.5 shrink-0 rounded-full",
+                        STATUS_DOT[it.appt.status],
+                      )}
+                    />
+                    <span className="truncate">
+                      {hhmm(it.start)} {it.appt.customerName}
+                    </span>
                   </span>
                 ))}
                 {items.length > 2 ? (
