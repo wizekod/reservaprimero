@@ -18,6 +18,7 @@ export type ManagedAppointment = {
   staffName: string;
   businessName: string;
   businessSlug: string;
+  brandColor: string | null;
   timeZone: string;
   cancellationNoticeHours: number;
   maxBookingDays: number;
@@ -41,7 +42,7 @@ export async function getAppointmentByToken(
       `id, status, start_at, end_at, cancel_token, service_id, staff_member_id,
        services ( name, duration_minutes ),
        staff_members ( display_name ),
-       businesses ( name, slug, timezone, cancellation_notice_hours, max_booking_days )`,
+       businesses ( name, slug, timezone, brand_color, cancellation_notice_hours, max_booking_days )`,
     )
     .eq("cancel_token", token)
     .maybeSingle();
@@ -70,6 +71,7 @@ export async function getAppointmentByToken(
     staffName: staff.display_name,
     businessName: business.name,
     businessSlug: business.slug,
+    brandColor: business.brand_color,
     timeZone: business.timezone,
     cancellationNoticeHours: business.cancellation_notice_hours,
     maxBookingDays: business.max_booking_days,

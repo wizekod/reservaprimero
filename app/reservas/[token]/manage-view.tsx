@@ -8,10 +8,11 @@ import {
   rescheduleByToken,
 } from "@/lib/booking/manage-actions";
 import type { ManagedAppointment } from "@/lib/booking/manage";
+import { startOfMonth } from "@/lib/availability/tz";
+import { MonthCalendar, SlotGrid } from "@/components/booking/month-calendar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { capitalizeFirst } from "@/lib/utils";
+import { STATUS_BADGE } from "@/lib/appointments/status";
+import { capitalizeFirst, cn } from "@/lib/utils";
 
 const STATUS_TEXT: Record<ManagedAppointment["status"], string> = {
   confirmed: "Confirmada",
@@ -38,6 +39,7 @@ export function ManageView({
   const modifiable = appt.canModify && status === appt.status;
 
   const [date, setDate] = useState(minDate);
+  const [month, setMonth] = useState(() => startOfMonth(minDate));
   const [slots, setSlots] = useState<string[]>([]);
   const [slotsLoaded, setSlotsLoaded] = useState(false);
 
@@ -97,13 +99,10 @@ export function ManageView({
           <p className="text-sm text-muted-foreground">{whenText}</p>
           <p className="text-sm text-muted-foreground">con {appt.staffName}</p>
           <span
-            className={`mt-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              status === "cancelled"
-                ? "bg-muted text-muted-foreground"
-                : status === "confirmed"
-                  ? "bg-emerald-500/15 text-emerald-700"
-                  : "bg-amber-500/15 text-amber-700"
-            }`}
+            className={cn(
+              "mt-3 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium",
+              STATUS_BADGE[status],
+            )}
           >
             {STATUS_TEXT[status]}
           </span>
@@ -156,43 +155,39 @@ export function ManageView({
               </Button>
             </div>
           ) : (
-            <div className="grid gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="date">Nuevo día</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={date}
-                  min={minDate}
-                  max={maxDate}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    loadSlots(e.target.value);
-                  }}
-                />
+            <div className="grid gap-5">
+              <MonthCalendar
+                month={month}
+                onMonth={setMonth}
+                selected={date}
+                minDate={minDate}
+                maxDate={maxDate}
+                accent={appt.brandColor ?? undefined}
+                onPick={(d) => {
+                  setDate(d);
+                  loadSlots(d);
+                }}
+              />
+
+              <div className="border-t border-border pt-5">
+                {pending && !slotsLoaded ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Buscando horarios…
+                  </p>
+                ) : slotsLoaded && slots.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No hay horarios disponibles ese día. Prueba con otra fecha.
+                  </p>
+                ) : (
+                  <SlotGrid
+                    slots={slots}
+                    label={(s) => dtf(s, { hour: "2-digit", minute: "2-digit" })}
+                    onPick={doReschedule}
+                    disabled={pending}
+                  />
+                )}
               </div>
-              {pending && !slotsLoaded ? (
-                <p className="text-sm text-muted-foreground">Buscando…</p>
-              ) : slotsLoaded && slots.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Sin horarios ese día.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {slots.map((s) => (
-                    <Button
-                      key={s}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => doReschedule(s)}
-                      disabled={pending}
-                    >
-                      {dtf(s, { hour: "2-digit", minute: "2-digit" })}
-                    </Button>
-                  ))}
-                </div>
-              )}
+
               <button
                 type="button"
                 onClick={() => setView("summary")}

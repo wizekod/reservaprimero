@@ -4,8 +4,6 @@ import { useState, useTransition } from "react";
 import {
   ArrowLeft,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Copy,
   MapPin,
@@ -21,7 +19,8 @@ import {
   type BookableStaff,
 } from "@/lib/booking/actions";
 import type { PublicService } from "@/lib/booking/queries";
-import { addDays, addMonths, dayOfWeek, startOfMonth } from "@/lib/availability/tz";
+import { startOfMonth } from "@/lib/availability/tz";
+import { MonthCalendar, SlotGrid } from "@/components/booking/month-calendar";
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/ui/avatar";
 import { mediaUrl } from "@/lib/storage/media";
 import { expectedPhoneDigits, phoneLengthError } from "@/lib/customers/phone";
-import { capitalizeFirst, cn, formatMoney, hexA } from "@/lib/utils";
+import { capitalizeFirst, cn, formatMoney } from "@/lib/utils";
 
 type Business = {
   name: string;
@@ -45,23 +44,6 @@ type ChosenSlot = { start: string; staffMemberId: string };
 type Step = "service" | "staff" | "slot" | "details" | "done";
 
 const STEPS: Step[] = ["service", "staff", "slot", "details", "done"];
-
-const DOW = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
-function daysInMonth(monthFirst: string): number {
-  const [y, m] = monthFirst.split("-").map(Number);
-  return new Date(Date.UTC(y!, m!, 0)).getUTCDate();
-}
-
-/** Encabezado del calendario: "Septiembre 2026". */
-const monthLabel = (monthFirst: string) =>
-  capitalizeFirst(
-    new Date(`${monthFirst}T12:00:00Z`).toLocaleDateString("es", {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    }),
-  );
 
 export function BookingFlow({
   slug,
@@ -449,21 +431,16 @@ export function BookingFlow({
                       fecha.
                     </p>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-                      {slots.map((s) => (
-                        <button
-                          key={s.start}
-                          type="button"
-                          onClick={() => {
-                            setSlot(s);
-                            setStep("details");
-                          }}
-                          className="rounded-xl bg-muted py-3 text-sm font-medium tabular-nums transition-colors hover:bg-accent"
-                        >
-                          {timeFmt(s.start)}
-                        </button>
-                      ))}
-                    </div>
+                    <SlotGrid
+                      slots={slots.map((s) => s.start)}
+                      label={timeFmt}
+                      onPick={(start) => {
+                        const elegido = slots.find((s) => s.start === start);
+                        if (!elegido) return;
+                        setSlot(elegido);
+                        setStep("details");
+                      }}
+                    />
                   )}
                 </div>
               </Panel>
@@ -633,117 +610,6 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-baseline justify-between gap-4 py-3 first:pt-0 last:pb-0">
       <dt className="shrink-0 text-muted-foreground">{label}</dt>
       <dd className="min-w-0 text-right font-semibold">{value}</dd>
-    </div>
-  );
-}
-
-/**
- * Calendario del mes para elegir día.
- *
- * Los días en azul son los que el negocio admite reservar (desde hoy hasta su
- * horizonte de reservas), no los que tienen hueco libre: saber eso exigiría
- * calcular la disponibilidad de los treinta días de golpe. Los huecos reales
- * aparecen abajo al elegir el día.
- */
-function MonthCalendar({
-  month,
-  onMonth,
-  selected,
-  minDate,
-  maxDate,
-  accent,
-  onPick,
-}: {
-  month: string;
-  onMonth: (m: string) => void;
-  selected: string;
-  minDate: string;
-  maxDate: string;
-  accent?: string;
-  onPick: (d: string) => void;
-}) {
-  const inicio = addDays(month, -dayOfWeek(month));
-  const celdas = Math.ceil((dayOfWeek(month) + daysInMonth(month)) / 7) * 7;
-  const dias = Array.from({ length: celdas }, (_, i) => addDays(inicio, i));
-
-  const mesAnterior = addMonths(month, -1);
-  const mesSiguiente = addMonths(month, 1);
-  const puedeAtras = addDays(mesAnterior, daysInMonth(mesAnterior) - 1) >= minDate;
-  const puedeAdelante = mesSiguiente <= maxDate;
-
-  return (
-    <div>
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold">{monthLabel(month)}</h3>
-        <div className="flex gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Mes anterior"
-            disabled={!puedeAtras}
-            onClick={() => onMonth(mesAnterior)}
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Mes siguiente"
-            disabled={!puedeAdelante}
-            onClick={() => onMonth(mesSiguiente)}
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
-        {DOW.map((d) => (
-          <span key={d} className="py-1">
-            {d}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-1 grid grid-cols-7 gap-1">
-        {dias.map((d) => {
-          const delMes = d.slice(0, 7) === month.slice(0, 7);
-          const reservable = delMes && d >= minDate && d <= maxDate;
-          const elegido = d === selected;
-          return (
-            <button
-              key={d}
-              type="button"
-              disabled={!reservable}
-              onClick={() => onPick(d)}
-              aria-current={elegido ? "date" : undefined}
-              className={cn(
-                "aspect-square rounded-lg text-sm font-medium tabular-nums transition-colors",
-                !delMes
-                  ? "invisible"
-                  : elegido
-                    ? "text-white"
-                    : reservable
-                      ? "hover:brightness-95"
-                      : "bg-muted/60 text-muted-foreground/60",
-              )}
-              style={
-                elegido
-                  ? { backgroundColor: accent ?? "var(--primary)" }
-                  : reservable
-                    ? accent
-                      ? { backgroundColor: hexA(accent, 0.12), color: accent }
-                      : { backgroundColor: "var(--primary)", color: "white" }
-                    : undefined
-              }
-            >
-              {Number(d.slice(8))}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
