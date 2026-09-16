@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar } from "@/components/ui/avatar";
+import { mediaUrl } from "@/lib/storage/media";
 import { capitalizeFirst, cn } from "@/lib/utils";
 
 type Business = {
@@ -268,6 +270,14 @@ export function BookingFlow({
                       disabled={pending}
                       className="group flex items-center gap-3 rounded-xl border border-border px-3.5 py-3 text-left transition-colors hover:border-primary/40 hover:bg-accent/50 disabled:opacity-50"
                     >
+                      {s.image_path ? (
+                        <Avatar
+                          src={mediaUrl(s.image_path)}
+                          name={s.name}
+                          square
+                          className="size-14"
+                        />
+                      ) : null}
                       <span className="min-w-0 flex-1">
                         <span className="block font-medium">{s.name}</span>
                         {s.description ? (
@@ -311,7 +321,8 @@ export function BookingFlow({
                     label={m.display_name}
                     onClick={() => pickStaff(m.id)}
                     disabled={pending}
-                    accent={accent}
+                    accent={m.color ?? accent}
+                    avatarPath={m.avatar_path}
                   />
                 ))}
                 {staffList.length === 0 ? (
@@ -511,6 +522,7 @@ function StaffOption({
   onClick,
   disabled,
   accent,
+  avatarPath,
   any,
 }: {
   label: string;
@@ -518,6 +530,7 @@ function StaffOption({
   onClick: () => void;
   disabled?: boolean;
   accent?: string;
+  avatarPath?: string | null;
   any?: boolean;
 }) {
   return (
@@ -527,15 +540,18 @@ function StaffOption({
       disabled={disabled}
       className="flex items-center gap-3 rounded-xl border border-border px-3.5 py-3 text-left transition-colors hover:border-primary/40 hover:bg-accent/50 disabled:opacity-50"
     >
-      <span
-        className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
-          any ? "bg-muted text-muted-foreground" : "text-white",
-        )}
-        style={any ? undefined : { backgroundColor: accent ?? "var(--primary)" }}
-      >
-        {any ? "★" : label.charAt(0).toUpperCase()}
-      </span>
+      {any ? (
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
+          ★
+        </span>
+      ) : (
+        <Avatar
+          src={mediaUrl(avatarPath)}
+          name={label}
+          color={accent ?? "var(--primary)"}
+          className="size-11"
+        />
+      )}
       <span className="min-w-0">
         <span className="block font-medium">{label}</span>
         {hint ? (

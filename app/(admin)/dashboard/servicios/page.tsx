@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { listServices } from "@/lib/services/queries";
 import { buttonVariants } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { mediaUrl } from "@/lib/storage/media";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { ServiceRowActions } from "./service-row-actions";
@@ -56,28 +58,36 @@ export default async function ServiciosPage() {
               key={s.id}
               className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
             >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  {s.color ? (
-                    <span
-                      aria-hidden
-                      className="size-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: s.color }}
-                    />
-                  ) : null}
-                  <span className="font-medium">{s.name}</span>
-                  {!s.active ? (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      Inactivo
-                    </span>
-                  ) : null}
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar
+                  src={mediaUrl(s.image_path)}
+                  name={s.name}
+                  color={s.color}
+                  square
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    {s.color ? (
+                      <span
+                        aria-hidden
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: s.color }}
+                      />
+                    ) : null}
+                    <span className="font-medium">{s.name}</span>
+                    {!s.active ? (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        Inactivo
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {s.duration_minutes} min · {fmtPrice(s.price)}
+                    {s.buffer_minutes > 0
+                      ? ` · +${s.buffer_minutes} min de margen`
+                      : ""}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {s.duration_minutes} min · {fmtPrice(s.price)}
-                  {s.buffer_minutes > 0
-                    ? ` · +${s.buffer_minutes} min de margen`
-                    : ""}
-                </p>
               </div>
               <div className="flex items-center gap-1">
                 <Link

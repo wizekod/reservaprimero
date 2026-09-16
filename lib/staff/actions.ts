@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -9,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { clientEnv } from "@/lib/env";
 import { getMyBusiness } from "@/lib/businesses/queries";
 import { nextStaffColor } from "@/lib/staff/palette";
+import { MEDIA_BUCKET, isOwnMediaPath } from "@/lib/storage/media";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
 
 const nameField = z
@@ -31,10 +33,16 @@ const colorOpt = z.preprocess(
     .optional(),
 );
 
+const pathOpt = z.preprocess(
+  emptyToUndefined,
+  z.string().trim().max(300).optional(),
+);
+
 const createSchema = z.object({ display_name: nameField, email: emailOpt });
 const updateSchema = z.object({
   display_name: nameField,
   color: colorOpt,
+  avatar_path: pathOpt,
   active: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
 });
 
@@ -138,23 +146,48 @@ export async function updateStaff(
   const parsed = updateSchema.safeParse({
     display_name: formData.get("display_name"),
     color: formData.get("color"),
+    avatar_path: formData.get("avatar_path"),
     active: formData.get("active"),
   });
   if (!parsed.success) {
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
   }
 
+  // La ruta viene de un input oculto, o sea que es entrada del usuario: sin
+  // esto se podría apuntar (y hacer borrar) un fichero de otro negocio.
+  const avatar = parsed.data.avatar_path ?? null;
+  if (avatar && !isOwnMediaPath(avatar, business.id, "staff")) {
+    return { error: "Imagen no válida." };
+  }
+
   const supabase = await createClient();
+  const { data: previo } = await supabase
+    .from("staff_members")
+    .select("avatar_path")
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("staff_members")
     .update({
       display_name: parsed.data.display_name,
       color: parsed.data.color ?? null,
+      avatar_path: avatar,
       active: parsed.data.active,
     })
     .eq("id", id)
     .eq("business_id", business.id);
   if (error) return { error: "No se pudieron guardar los cambios." };
+
+  // Después del UPDATE y sólo si fue bien: al revés dejaría la ficha
+  // apuntando a un fichero ya borrado. No debe bloquear la respuesta.
+  if (previo?.avatar_path && previo.avatar_path !== avatar) {
+    const viejo = previo.avatar_path;
+    after(async () => {
+      await createAdminClient().storage.from(MEDIA_BUCKET).remove([viejo]);
+    });
+  }
 
   revalidatePath("/dashboard/staff");
   redirect("/dashboard/staff");

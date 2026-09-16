@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { listStaff, type StaffStatus } from "@/lib/staff/queries";
 import { buttonVariants } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
+import { mediaUrl } from "@/lib/storage/media";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { StaffRowActions } from "@/components/staff/staff-row-actions";
@@ -69,20 +71,27 @@ export default async function StaffPage({
               key={m.id}
               className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
             >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{m.display_name}</span>
-                  {!m.active ? (
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      Inactivo
-                    </span>
-                  ) : null}
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar
+                  src={mediaUrl(m.avatar_path)}
+                  name={m.display_name}
+                  color={m.color}
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{m.display_name}</span>
+                    {!m.active ? (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        Inactivo
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {STATUS_PILL[m.status]}
+                    {m.invited_email ? ` · ${m.invited_email}` : ""}
+                    {` · ${m.service_ids.length} servicio${m.service_ids.length === 1 ? "" : "s"}`}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {STATUS_PILL[m.status]}
-                  {m.invited_email ? ` · ${m.invited_email}` : ""}
-                  {` · ${m.service_ids.length} servicio${m.service_ids.length === 1 ? "" : "s"}`}
-                </p>
               </div>
               <div className="flex items-center gap-1">
                 <Link

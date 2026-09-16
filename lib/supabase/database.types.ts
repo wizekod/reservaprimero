@@ -466,6 +466,7 @@ export type Database = {
           description: string | null
           duration_minutes: number
           id: string
+          image_path: string | null
           name: string
           price: number
           updated_at: string
@@ -479,6 +480,7 @@ export type Database = {
           description?: string | null
           duration_minutes: number
           id?: string
+          image_path?: string | null
           name: string
           price?: number
           updated_at?: string
@@ -492,6 +494,7 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           id?: string
+          image_path?: string | null
           name?: string
           price?: number
           updated_at?: string
@@ -509,7 +512,7 @@ export type Database = {
       staff_members: {
         Row: {
           active: boolean
-          avatar_url: string | null
+          avatar_path: string | null
           business_id: string
           color: string | null
           created_at: string
@@ -521,7 +524,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          avatar_url?: string | null
+          avatar_path?: string | null
           business_id: string
           color?: string | null
           created_at?: string
@@ -533,7 +536,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          avatar_url?: string | null
+          avatar_path?: string | null
           business_id?: string
           color?: string | null
           created_at?: string
@@ -645,6 +648,7 @@ export type Database = {
       }
       is_server_role: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      owns_media_path: { Args: { object_name: string }; Returns: boolean }
       phone_dial_code: { Args: { tz: string }; Returns: string }
       upsert_customer: {
         Args: {

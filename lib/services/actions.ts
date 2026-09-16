@@ -1,11 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getMyBusiness } from "@/lib/businesses/queries";
+import { MEDIA_BUCKET, isOwnMediaPath } from "@/lib/storage/media";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
 
 const serviceSchema = z.object({
@@ -28,6 +31,10 @@ const serviceSchema = z.object({
     .int("Debe ser un número entero")
     .min(0, "No puede ser negativo")
     .max(240, "Máximo 240 minutos"),
+  image_path: z.preprocess(
+    emptyToUndefined,
+    z.string().trim().max(300).optional(),
+  ),
   color: z.preprocess(
     emptyToUndefined,
     z
@@ -46,6 +53,7 @@ function parse(formData: FormData) {
     price: formData.get("price"),
     buffer_minutes: formData.get("buffer_minutes"),
     color: formData.get("color"),
+    image_path: formData.get("image_path"),
   });
 }
 
@@ -62,6 +70,11 @@ export async function createService(
   }
   const d = parsed.data;
 
+  const imagen = d.image_path ?? null;
+  if (imagen && !isOwnMediaPath(imagen, business.id, "services")) {
+    return { error: "Imagen no válida." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.from("services").insert({
     business_id: business.id,
@@ -71,6 +84,7 @@ export async function createService(
     price: d.price,
     buffer_minutes: d.buffer_minutes,
     color: d.color ?? null,
+    image_path: imagen,
   });
   if (error) return { error: "No se pudo crear el servicio." };
 
@@ -94,7 +108,21 @@ export async function updateService(
   }
   const d = parsed.data;
 
+  // La ruta llega en un input oculto: entrada del usuario. Sin comprobarla, se
+  // podría apuntar (y hacer borrar) un fichero de otro negocio.
+  const imagen = d.image_path ?? null;
+  if (imagen && !isOwnMediaPath(imagen, business.id, "services")) {
+    return { error: "Imagen no válida." };
+  }
+
   const supabase = await createClient();
+  const { data: previo } = await supabase
+    .from("services")
+    .select("image_path")
+    .eq("id", id)
+    .eq("business_id", business.id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("services")
     .update({
@@ -104,10 +132,20 @@ export async function updateService(
       price: d.price,
       buffer_minutes: d.buffer_minutes,
       color: d.color ?? null,
+      image_path: imagen,
     })
     .eq("id", id)
     .eq("business_id", business.id);
   if (error) return { error: "No se pudieron guardar los cambios." };
+
+  // Después del UPDATE y sólo si fue bien: al revés dejaría el servicio
+  // apuntando a un fichero ya borrado.
+  if (previo?.image_path && previo.image_path !== imagen) {
+    const viejo = previo.image_path;
+    after(async () => {
+      await createAdminClient().storage.from(MEDIA_BUCKET).remove([viejo]);
+    });
+  }
 
   revalidatePath("/dashboard/servicios");
   redirect("/dashboard/servicios");

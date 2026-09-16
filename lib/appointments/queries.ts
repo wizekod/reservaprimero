@@ -16,7 +16,7 @@ export type AgendaAppointment = {
   serviceColor: string | null;
   staffName: string;
   staffColor: string | null;
-  staffAvatarUrl: string | null;
+  staffAvatarPath: string | null;
   customerId: string;
   customerName: string;
   customerPhone: string | null;
@@ -39,7 +39,7 @@ export async function listAppointments(
     .select(
       `id, status, start_at, end_at, notes, staff_member_id,
        services ( name, color, price ),
-       staff_members ( display_name, color, avatar_url ),
+       staff_members ( display_name, color, avatar_path ),
        customers ( id, name, phone )`,
     )
     .eq("business_id", business.id)
@@ -63,7 +63,7 @@ export async function listAppointments(
       serviceColor: service?.color ?? null,
       staffName: staff?.display_name ?? "—",
       staffColor: staff?.color ?? null,
-      staffAvatarUrl: staff?.avatar_url ?? null,
+      staffAvatarPath: staff?.avatar_path ?? null,
       customerId: customer?.id ?? "",
       customerName: customer?.name ?? "—",
       customerPhone: customer?.phone ?? null,
@@ -76,7 +76,7 @@ export type StaffOption = {
   id: string;
   name: string;
   color: string | null;
-  avatarUrl: string | null;
+  avatarPath: string | null;
 };
 
 export async function listStaffOptions(): Promise<StaffOption[]> {
@@ -85,7 +85,7 @@ export async function listStaffOptions(): Promise<StaffOption[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("staff_members")
-    .select("id, display_name, color, avatar_url")
+    .select("id, display_name, color, avatar_path")
     .eq("business_id", business.id)
     .eq("active", true)
     .order("display_name");
@@ -93,6 +93,6 @@ export async function listStaffOptions(): Promise<StaffOption[]> {
     id: s.id,
     name: s.display_name,
     color: s.color,
-    avatarUrl: s.avatar_url,
+    avatarPath: s.avatar_path,
   }));
 }

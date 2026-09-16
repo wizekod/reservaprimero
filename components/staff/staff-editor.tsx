@@ -14,6 +14,7 @@ import type { ServiceRow } from "@/lib/supabase/database.types";
 import type { StaffMemberWithMeta } from "@/lib/staff/queries";
 import { STAFF_COLORS } from "@/lib/staff/palette";
 import { cn } from "@/lib/utils";
+import { ImageField } from "@/components/media/image-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,9 +36,11 @@ const STATUS_TEXT: Record<StaffMemberWithMeta["status"], string> = {
 export function StaffEditor({
   staff,
   services,
+  businessId,
 }: {
   staff: StaffMemberWithMeta;
   services: ServiceRow[];
+  businessId: string;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     updateStaff,
@@ -47,6 +50,8 @@ export function StaffEditor({
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(staff.service_ids),
   );
+  // La foto sube fuera del formulario; no se puede enviar a medias.
+  const [uploading, setUploading] = useState(false);
   const [savingSvcs, startSvcs] = useTransition();
   const [resending, startResend] = useTransition();
 
@@ -125,6 +130,17 @@ export function StaffEditor({
               ) : null}
             </div>
 
+            <ImageField
+              name="avatar_path"
+              kind="staff"
+              businessId={businessId}
+              defaultPath={staff.avatar_path}
+              label="Foto"
+              fallbackName={staff.display_name}
+              color={staff.color}
+              onBusyChange={setUploading}
+            />
+
             <div className="grid gap-2">
               <Label>Color en el calendario</Label>
               <ColorPicker defaultValue={staff.color} />
@@ -163,7 +179,7 @@ export function StaffEditor({
             ) : null}
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || uploading}>
               {pending ? "Guardando…" : "Guardar datos"}
             </Button>
           </CardFooter>

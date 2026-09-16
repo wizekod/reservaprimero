@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getStaffMember } from "@/lib/staff/queries";
 import { listServices } from "@/lib/services/queries";
+import { getMyBusiness } from "@/lib/businesses/queries";
 import { StaffEditor } from "@/components/staff/staff-editor";
 
 export const metadata: Metadata = { title: "Editar staff · ReservaPrimero" };
@@ -13,11 +14,14 @@ export default async function EditarStaffPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [staff, services] = await Promise.all([
+  const [business, staff, services] = await Promise.all([
+    getMyBusiness(),
     getStaffMember(id),
     listServices(),
   ]);
-  if (!staff) notFound();
+  if (!business || !staff) notFound();
 
-  return <StaffEditor staff={staff} services={services} />;
+  return (
+    <StaffEditor staff={staff} services={services} businessId={business.id} />
+  );
 }

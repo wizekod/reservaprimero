@@ -14,7 +14,12 @@ import { clientIp } from "@/lib/security/request";
 import { verifyTurnstile } from "@/lib/security/turnstile";
 import { isWithinMonthlyBookingLimit } from "@/lib/stripe/plan-limit";
 
-export type BookableStaff = { id: string; display_name: string };
+export type BookableStaff = {
+  id: string;
+  display_name: string;
+  color: string | null;
+  avatar_path: string | null;
+};
 
 async function resolveBusiness(slug: string) {
   const admin = createAdminClient();
@@ -47,7 +52,7 @@ export async function getBookableStaff(
 
   const { data: staff } = await admin
     .from("staff_members")
-    .select("id, display_name")
+    .select("id, display_name, color, avatar_path")
     .eq("business_id", business.id)
     .eq("active", true)
     .in("id", ids)

@@ -16,6 +16,17 @@ export function capitalizeFirst(text: string): string {
 }
 
 /**
+ * Iniciales para cuando no hay foto. Dos para una persona ("Ana García" → AG)
+ * y una sola para un nombre de una palabra.
+ */
+export function monogram(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return "?"
+  if (words.length === 1) return words[0]!.charAt(0).toUpperCase()
+  return (words[0]!.charAt(0) + words[words.length - 1]!.charAt(0)).toUpperCase()
+}
+
+/**
  * `#rrggbb` + alfa → `rgb(r g b / a)`. El color del profesional es un hex
  * arbitrario guardado en la base, así que no puede venir de una clase de
  * Tailwind: se compone aquí para el `style` inline del bloque del calendario.

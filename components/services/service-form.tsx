@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 
 import type { FormState } from "@/lib/forms";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageField } from "@/components/media/image-field";
 import {
   Card,
   CardContent,
@@ -29,11 +30,13 @@ function FieldError({ messages }: { messages?: string[] }) {
 
 export function ServiceForm({
   action,
+  businessId,
   service,
   title,
   submitLabel,
 }: {
   action: ServiceAction;
+  businessId: string;
   service?: ServiceRow;
   title: string;
   submitLabel: string;
@@ -42,6 +45,8 @@ export function ServiceForm({
     action,
     {},
   );
+  // La imagen sube fuera del formulario; no se puede enviar a medias.
+  const [uploading, setUploading] = useState(false);
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
@@ -149,9 +154,22 @@ export function ServiceForm({
                 <FieldError messages={state.fieldErrors?.color} />
               </div>
             </div>
+
+            <ImageField
+              name="image_path"
+              kind="services"
+              businessId={businessId}
+              defaultPath={service?.image_path}
+              label="Imagen (opcional)"
+              fallbackName={service?.name ?? "Servicio"}
+              color={service?.color}
+              square
+              maxPx={800}
+              onBusyChange={setUploading}
+            />
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || uploading}>
               {pending ? "Guardando…" : submitLabel}
             </Button>
           </CardFooter>

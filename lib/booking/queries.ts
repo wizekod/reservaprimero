@@ -25,7 +25,7 @@ export async function getPublicServices(businessId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("services")
-    .select("id, name, description, duration_minutes, price, color")
+    .select("id, name, description, duration_minutes, price, color, image_path")
     .eq("business_id", businessId)
     .eq("active", true)
     .order("name");

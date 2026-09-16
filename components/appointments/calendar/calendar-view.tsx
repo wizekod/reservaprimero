@@ -16,7 +16,9 @@ import {
 } from "@/lib/appointments/status";
 import { addDays, addMonths, zonedDateAndMinutes } from "@/lib/availability/tz";
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { mediaUrl } from "@/lib/storage/media";
 import { capitalizeFirst, cn, hexA } from "@/lib/utils";
 
 export type CalendarView = "dia" | "semana" | "mes";
@@ -268,6 +270,7 @@ export function CalendarView({
                 active={staffId === s.id}
                 onClick={() => setStaffId(s.id)}
                 color={s.color}
+                avatarPath={s.avatarPath}
               >
                 {s.name}
               </FilterChip>
@@ -420,11 +423,13 @@ function FilterChip({
   active,
   onClick,
   color,
+  avatarPath,
   children,
 }: {
   active: boolean;
   onClick: () => void;
   color?: string | null;
+  avatarPath?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -438,7 +443,9 @@ function FilterChip({
           : "border-border text-muted-foreground hover:bg-muted",
       )}
     >
-      {color ? (
+      {avatarPath ? (
+        <Avatar src={mediaUrl(avatarPath)} name="" className="size-4" />
+      ) : color ? (
         <span
           aria-hidden
           className="size-2.5 shrink-0 rounded-full"
