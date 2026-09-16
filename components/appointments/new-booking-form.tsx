@@ -12,7 +12,12 @@ import {
 import { createAppointmentAsAdmin } from "@/lib/appointments/actions";
 import { lookupCustomerByPhone } from "@/lib/customers/actions";
 import type { PublicService } from "@/lib/booking/queries";
-import { startOfMonth } from "@/lib/availability/tz";
+import {
+  addDays,
+  addMonths,
+  startOfMonth,
+  zonedDateAndMinutes,
+} from "@/lib/availability/tz";
 import { MonthCalendar, SlotGrid } from "@/components/booking/month-calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,9 +51,13 @@ export function NewBookingForm({
   const [date, setDate] = useState(minDate);
   const [month, setMonth] = useState(() => startOfMonth(minDate));
   const [tz, setTz] = useState("UTC");
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [slotsLoaded, setSlotsLoaded] = useState(false);
+  // Huecos del mes cargado, por día local. Elegir día no toca el servidor.
+  const [porDia, setPorDia] = useState<Map<string, Slot[]>>(new Map());
+  const [mesCargado, setMesCargado] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
+
+  const slots = porDia.get(date) ?? [];
+  const slotsLoaded = mesCargado === month;
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
@@ -93,45 +102,58 @@ export function NewBookingForm({
     setServiceId(id);
     setStaffId(null);
     setSlot(null);
-    setSlots([]);
-    setSlotsLoaded(false);
+    setPorDia(new Map());
+    setMesCargado(null);
     startTransition(async () => {
       setStaffList(id ? await getBookableStaff(slug, id) : []);
     });
   }
 
-  function loadSlots(d: string, forStaff: string | null, svc = serviceId) {
+  /** Un viaje por mes, no uno por día: cada consulta cuesta ~1 s de red. */
+  function loadMonth(mes: string, forStaff: string | null, svc = serviceId) {
     if (!svc) return;
-    setSlotsLoaded(false);
+    setMesCargado(null);
     setSlot(null);
     startTransition(async () => {
-      const res = await fetchSlots(slug, svc, forStaff, d);
-      if (res.ok) {
-        setTz(res.timeZone);
-        const seen = new Set<string>();
-        const uniq: Slot[] = [];
-        for (const s of res.slots) {
-          if (seen.has(s.start)) continue;
-          seen.add(s.start);
-          uniq.push({ start: s.start, staffMemberId: s.staffMemberId });
-        }
-        setSlots(uniq);
-      } else {
-        setSlots([]);
+      const ultimo = addDays(addMonths(mes, 1), -1);
+      const res = await fetchSlots(slug, svc, forStaff, mes, ultimo);
+      if (!res.ok) {
+        setPorDia(new Map());
+        setMesCargado(mes);
+        return;
       }
-      setSlotsLoaded(true);
+      setTz(res.timeZone);
+
+      const mapa = new Map<string, Slot[]>();
+      const vistos = new Set<string>();
+      for (const s of res.slots) {
+        if (vistos.has(s.start)) continue;
+        vistos.add(s.start);
+        const dia = zonedDateAndMinutes(s.start, res.timeZone).date;
+        mapa.set(dia, [
+          ...(mapa.get(dia) ?? []),
+          { start: s.start, staffMemberId: s.staffMemberId },
+        ]);
+      }
+      setPorDia(mapa);
+      setMesCargado(mes);
+      if (!mapa.has(date)) {
+        const primero = [...mapa.keys()].sort()[0];
+        if (primero) setDate(primero);
+      }
     });
   }
 
   function pickStaff(id: string | null) {
     setStaffId(id);
-    loadSlots(date, id);
+    loadMonth(month, id);
   }
 
+  /** Instantáneo: los huecos del mes ya están en memoria. */
   function changeDate(d: string) {
     if (d < minDate || d > maxDate) return;
     setDate(d);
-    loadSlots(d, staffId);
+    setSlot(null);
   }
 
   function submit() {
@@ -246,7 +268,11 @@ export function NewBookingForm({
             <div className="grid gap-5 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:gap-6">
               <MonthCalendar
                 month={month}
-                onMonth={setMonth}
+                onMonth={(m) => {
+                  setMonth(m);
+                  loadMonth(m, staffId);
+                }}
+                available={slotsLoaded ? new Set(porDia.keys()) : null}
                 selected={date}
                 minDate={minDate}
                 maxDate={maxDate}

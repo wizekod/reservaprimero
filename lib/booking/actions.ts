@@ -107,13 +107,27 @@ export async function lookupPublicCustomer(
 
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Huecos libres de un rango de días.
+ *
+ * Se pide un mes entero de golpe en vez de un día por clic. El proyecto de
+ * Supabase es remoto y cada consulta cuesta ~200 ms de red, así que pedir día
+ * a día dejaba el calendario en algo más de un segundo por pulsación; con el
+ * mes cargado, elegir día no toca el servidor.
+ *
+ * `dateTo` es opcional para no romper a quien pida un solo día.
+ */
 export async function fetchSlots(
   slug: string,
   serviceId: string,
   staffId: string | null,
-  date: string,
+  dateFrom: string,
+  dateTo?: string,
 ) {
-  if (!dateRe.test(date)) return { ok: false as const, reason: "bad_date" };
+  const hasta = dateTo ?? dateFrom;
+  if (!dateRe.test(dateFrom) || !dateRe.test(hasta) || hasta < dateFrom) {
+    return { ok: false as const, reason: "bad_date" };
+  }
 
   if (!rateLimit(`slots:${await clientIp()}`, 120, 60_000).ok) {
     return { ok: false as const, reason: "rate_limited" };
@@ -122,13 +136,29 @@ export async function fetchSlots(
   const business = await resolveBusiness(slug);
   if (!business) return { ok: false as const, reason: "business_not_found" };
 
+  // Se recorta al rango reservable en vez de rechazarlo: quien pide "todo
+  // septiembre" recibe la parte que sí se puede reservar.
   const today = todayInTz(business.timezone);
   const maxDate = addDays(today, business.max_booking_days);
-  if (date < today || date > maxDate) {
-    return { ok: true as const, slots: [], timeZone: business.timezone, slotIntervalMinutes: 0 };
+  const desde = dateFrom < today ? today : dateFrom;
+  const limite = hasta > maxDate ? maxDate : hasta;
+
+  if (limite < desde) {
+    return {
+      ok: true as const,
+      slots: [],
+      timeZone: business.timezone,
+      slotIntervalMinutes: 0,
+    };
   }
 
-  return getSlots({ slug, serviceId, staffId: staffId ?? undefined, dateFrom: date, dateTo: date });
+  return getSlots({
+    slug,
+    serviceId,
+    staffId: staffId ?? undefined,
+    dateFrom: desde,
+    dateTo: limite,
+  });
 }
 
 const bookingSchema = z.object({

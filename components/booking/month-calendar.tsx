@@ -40,6 +40,7 @@ export function MonthCalendar({
   minDate,
   maxDate,
   accent,
+  available,
   onPick,
 }: {
   /** Primer día del mes que se muestra, "YYYY-MM-01". */
@@ -50,6 +51,12 @@ export function MonthCalendar({
   maxDate: string;
   /** Color de marca del negocio. Sin él se usa el de la app. */
   accent?: string;
+  /**
+   * Días con algún hueco libre. Si se pasa, los que no estén se ven apagados y
+   * no se pueden pulsar; si no, vale cualquier día dentro del rango reservable
+   * (es el caso mientras el mes todavía se está cargando).
+   */
+  available?: Set<string> | null;
   onPick: (d: string) => void;
 }) {
   const inicio = addDays(month, -dayOfWeek(month));
@@ -100,7 +107,8 @@ export function MonthCalendar({
       <div className="mt-1 grid grid-cols-7 gap-1">
         {dias.map((d) => {
           const delMes = d.slice(0, 7) === month.slice(0, 7);
-          const reservable = delMes && d >= minDate && d <= maxDate;
+          const enRango = delMes && d >= minDate && d <= maxDate;
+          const reservable = enRango && (!available || available.has(d));
           const elegido = d === selected;
           return (
             <button

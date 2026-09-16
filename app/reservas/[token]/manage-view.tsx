@@ -8,7 +8,12 @@ import {
   rescheduleByToken,
 } from "@/lib/booking/manage-actions";
 import type { ManagedAppointment } from "@/lib/booking/manage";
-import { startOfMonth } from "@/lib/availability/tz";
+import {
+  addDays,
+  addMonths,
+  startOfMonth,
+  zonedDateAndMinutes,
+} from "@/lib/availability/tz";
 import { MonthCalendar, SlotGrid } from "@/components/booking/month-calendar";
 import { Button } from "@/components/ui/button";
 import { STATUS_BADGE } from "@/lib/appointments/status";
@@ -40,8 +45,12 @@ export function ManageView({
 
   const [date, setDate] = useState(minDate);
   const [month, setMonth] = useState(() => startOfMonth(minDate));
-  const [slots, setSlots] = useState<string[]>([]);
-  const [slotsLoaded, setSlotsLoaded] = useState(false);
+  // Huecos del mes cargado, por día local. Elegir día no toca el servidor.
+  const [porDia, setPorDia] = useState<Map<string, string[]>>(new Map());
+  const [mesCargado, setMesCargado] = useState<string | null>(null);
+
+  const slots = porDia.get(date) ?? [];
+  const slotsLoaded = mesCargado === month;
 
   const dtf = (iso: string, opts: Intl.DateTimeFormatOptions) =>
     new Date(iso).toLocaleString("es", { ...opts, timeZone: appt.timeZone });
@@ -49,14 +58,28 @@ export function ManageView({
     `${dtf(startAt, { weekday: "long", day: "numeric", month: "long" })} · ${dtf(startAt, { hour: "2-digit", minute: "2-digit" })}`,
   );
 
-  function loadSlots(d: string) {
-    setSlotsLoaded(false);
+  /** Un viaje por mes, no uno por día: cada consulta cuesta ~1 s de red. */
+  function loadMonth(mes: string) {
+    setMesCargado(null);
     startTransition(async () => {
-      const res = await fetchSlotsForReschedule(appt.token, d);
-      setSlots(
-        res.ok ? [...new Set(res.slots.map((s) => s.start))] : [],
-      );
-      setSlotsLoaded(true);
+      const ultimo = addDays(addMonths(mes, 1), -1);
+      const res = await fetchSlotsForReschedule(appt.token, mes, ultimo);
+      if (!res.ok) {
+        setPorDia(new Map());
+        setMesCargado(mes);
+        return;
+      }
+      const mapa = new Map<string, string[]>();
+      for (const s of [...new Set(res.slots.map((x) => x.start))]) {
+        const dia = zonedDateAndMinutes(s, appt.timeZone).date;
+        mapa.set(dia, [...(mapa.get(dia) ?? []), s]);
+      }
+      setPorDia(mapa);
+      setMesCargado(mes);
+      if (!mapa.has(date)) {
+        const primero = [...mapa.keys()].sort()[0];
+        if (primero) setDate(primero);
+      }
     });
   }
 
@@ -138,7 +161,7 @@ export function ManageView({
                 variant="outline"
                 onClick={() => {
                   setView("reschedule");
-                  loadSlots(date);
+                  loadMonth(month);
                 }}
                 disabled={pending}
               >
@@ -158,15 +181,16 @@ export function ManageView({
             <div className="grid gap-5">
               <MonthCalendar
                 month={month}
-                onMonth={setMonth}
+                onMonth={(m) => {
+                  setMonth(m);
+                  loadMonth(m);
+                }}
                 selected={date}
                 minDate={minDate}
                 maxDate={maxDate}
                 accent={appt.brandColor ?? undefined}
-                onPick={(d) => {
-                  setDate(d);
-                  loadSlots(d);
-                }}
+                available={slotsLoaded ? new Set(porDia.keys()) : null}
+                onPick={setDate}
               />
 
               <div className="border-t border-border pt-5">

@@ -31,56 +31,51 @@ const hhmm = (t: string) => t.slice(0, 5);
 export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
   const admin = createAdminClient();
 
-  const { data: business } = await admin
-    .from("businesses")
-    .select(
-      "id, timezone, status, min_booking_notice_hours, max_booking_days, slot_interval_minutes",
-    )
-    .eq("slug", p.slug)
-    .maybeSingle();
+  // El proyecto de Supabase es remoto: cada consulta cuesta ~150-250 ms de red,
+  // así que lo que no dependa de otra cosa va en paralelo. De seis viajes en
+  // serie a tres tandas.
+  const [{ data: business }, { data: ssRows }] = await Promise.all([
+    admin
+      .from("businesses")
+      .select(
+        "id, timezone, status, min_booking_notice_hours, max_booking_days, slot_interval_minutes",
+      )
+      .eq("slug", p.slug)
+      .maybeSingle(),
+    // Por servicio, sin filtrar por negocio: el filtro llega abajo, cuando se
+    // comprueba que el servicio y el staff son de este negocio.
+    admin
+      .from("staff_services")
+      .select("staff_member_id")
+      .eq("service_id", p.serviceId),
+  ]);
   if (!business || business.status === "suspended") {
     return { ok: false, reason: "business_not_found" };
   }
 
-  const { data: service } = await admin
-    .from("services")
-    .select("id, duration_minutes, buffer_minutes, active")
-    .eq("id", p.serviceId)
-    .eq("business_id", business.id)
-    .maybeSingle();
-  if (!service || !service.active) {
-    return { ok: false, reason: "service_not_found" };
-  }
-
-  const { data: ssRows } = await admin
-    .from("staff_services")
-    .select("staff_member_id")
-    .eq("service_id", p.serviceId);
   let candidateIds = (ssRows ?? []).map((r) => r.staff_member_id);
   if (p.staffId) candidateIds = candidateIds.filter((id) => id === p.staffId);
   if (candidateIds.length === 0) return { ok: false, reason: "no_staff" };
 
-  const { data: staffRows } = await admin
-    .from("staff_members")
-    .select("id")
-    .eq("business_id", business.id)
-    .eq("active", true)
-    .in("id", candidateIds);
+  const [{ data: service }, { data: staffRows }] = await Promise.all([
+    admin
+      .from("services")
+      .select("id, duration_minutes, buffer_minutes, active")
+      .eq("id", p.serviceId)
+      .eq("business_id", business.id)
+      .maybeSingle(),
+    admin
+      .from("staff_members")
+      .select("id")
+      .eq("business_id", business.id)
+      .eq("active", true)
+      .in("id", candidateIds),
+  ]);
+  if (!service || !service.active) {
+    return { ok: false, reason: "service_not_found" };
+  }
   const staffIds = (staffRows ?? []).map((s) => s.id);
   if (staffIds.length === 0) return { ok: false, reason: "no_staff" };
-
-  const [{ data: rules }, { data: exceptions }] = await Promise.all([
-    admin
-      .from("availability_rules")
-      .select("staff_member_id, day_of_week, start_time, end_time")
-      .in("staff_member_id", staffIds),
-    admin
-      .from("availability_exceptions")
-      .select("staff_member_id, date, is_closed, start_time, end_time")
-      .in("staff_member_id", staffIds)
-      .gte("date", p.dateFrom)
-      .lte("date", p.dateTo),
-  ]);
 
   // Margen de ±1-2 días para no perder citas cerca del borde por la tz.
   const busyFrom = new Date(`${p.dateFrom}T00:00:00Z`);
@@ -98,7 +93,21 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
   if (p.excludeAppointmentId) {
     apptQuery = apptQuery.neq("id", p.excludeAppointmentId);
   }
-  const { data: appts } = await apptQuery;
+
+  const [{ data: rules }, { data: exceptions }, { data: appts }] =
+    await Promise.all([
+      admin
+        .from("availability_rules")
+        .select("staff_member_id, day_of_week, start_time, end_time")
+        .in("staff_member_id", staffIds),
+      admin
+        .from("availability_exceptions")
+        .select("staff_member_id, date, is_closed, start_time, end_time")
+        .in("staff_member_id", staffIds)
+        .gte("date", p.dateFrom)
+        .lte("date", p.dateTo),
+      apptQuery,
+    ]);
 
   const slots = computeAvailability({
     now: p.now ?? new Date(),

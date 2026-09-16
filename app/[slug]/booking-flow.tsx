@@ -19,7 +19,12 @@ import {
   type BookableStaff,
 } from "@/lib/booking/actions";
 import type { PublicService } from "@/lib/booking/queries";
-import { startOfMonth } from "@/lib/availability/tz";
+import {
+  addDays,
+  addMonths,
+  startOfMonth,
+  zonedDateAndMinutes,
+} from "@/lib/availability/tz";
 import { MonthCalendar, SlotGrid } from "@/components/booking/month-calendar";
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
 import { Button } from "@/components/ui/button";
@@ -69,9 +74,14 @@ export function BookingFlow({
   const [month, setMonth] = useState(() => startOfMonth(minDate));
   const [query, setQuery] = useState("");
   const [tz, setTz] = useState("UTC");
-  const [slots, setSlots] = useState<ChosenSlot[]>([]);
-  const [slotsLoaded, setSlotsLoaded] = useState(false);
+  // Huecos del mes cargado, agrupados por fecha local del negocio. Elegir un
+  // día sólo mira este mapa; no vuelve al servidor.
+  const [porDia, setPorDia] = useState<Map<string, ChosenSlot[]>>(new Map());
+  const [mesCargado, setMesCargado] = useState<string | null>(null);
   const [slot, setSlot] = useState<ChosenSlot | null>(null);
+
+  const slots = porDia.get(date) ?? [];
+  const slotsLoaded = mesCargado === month;
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [tsToken, setTsToken] = useState("");
@@ -104,38 +114,63 @@ export function BookingFlow({
     });
   }
 
-  function loadSlots(forDate: string, forStaff: string | null) {
-    setSlotsLoaded(false);
+  /**
+   * Trae de una vez los huecos de todo el mes. Antes se pedía día a día y cada
+   * pulsación costaba más de un segundo, casi todo en viajes de red.
+   */
+  function loadMonth(mes: string, forStaff: string | null) {
+    setMesCargado(null);
     setSlot(null);
     startTransition(async () => {
-      const res = await fetchSlots(slug, service!.id, forStaff, forDate);
-      if (res.ok) {
-        setTz(res.timeZone);
-        const seen = new Set<string>();
-        const uniq: ChosenSlot[] = [];
-        for (const s of res.slots) {
-          if (seen.has(s.start)) continue;
-          seen.add(s.start);
-          uniq.push({ start: s.start, staffMemberId: s.staffMemberId });
-        }
-        setSlots(uniq);
-      } else {
-        setSlots([]);
+      const ultimo = addDays(addMonths(mes, 1), -1);
+      const res = await fetchSlots(slug, service!.id, forStaff, mes, ultimo);
+      if (!res.ok) {
+        setPorDia(new Map());
+        setMesCargado(mes);
+        return;
       }
-      setSlotsLoaded(true);
+      setTz(res.timeZone);
+
+      const mapa = new Map<string, ChosenSlot[]>();
+      const vistos = new Set<string>();
+      for (const s of res.slots) {
+        // Varios profesionales pueden ofrecer la misma hora: vale el primero.
+        if (vistos.has(s.start)) continue;
+        vistos.add(s.start);
+        const dia = zonedDateAndMinutes(s.start, res.timeZone).date;
+        const lista = mapa.get(dia) ?? [];
+        lista.push({ start: s.start, staffMemberId: s.staffMemberId });
+        mapa.set(dia, lista);
+      }
+      setPorDia(mapa);
+      setMesCargado(mes);
+
+      // Si el día que está elegido no tiene hueco —hoy suele caer en el día
+      // libre del profesional— se salta al primero que sí, en vez de recibir
+      // al cliente con un "no hay horarios".
+      if (!mapa.has(date)) {
+        const primero = [...mapa.keys()].sort()[0];
+        if (primero) setDate(primero);
+      }
     });
   }
 
   function pickStaff(id: string | null) {
     setStaffId(id);
     setStep("slot");
-    loadSlots(date, id);
+    loadMonth(month, id);
   }
 
+  /** Instantáneo: los huecos del mes ya están en memoria. */
   function changeDate(d: string) {
     if (d < minDate || d > maxDate) return;
     setDate(d);
-    loadSlots(d, staffId);
+    setSlot(null);
+  }
+
+  function changeMonth(m: string) {
+    setMonth(m);
+    loadMonth(m, staffId);
   }
 
   /**
@@ -412,11 +447,12 @@ export function BookingFlow({
               <Panel className="space-y-5">
                 <MonthCalendar
                   month={month}
-                  onMonth={setMonth}
+                  onMonth={changeMonth}
                   selected={date}
                   minDate={minDate}
                   maxDate={maxDate}
                   accent={accent}
+                  available={slotsLoaded ? new Set(porDia.keys()) : null}
                   onPick={changeDate}
                 />
 

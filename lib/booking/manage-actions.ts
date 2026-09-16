@@ -44,16 +44,28 @@ export async function cancelByToken(token: string): Promise<Result> {
   return { ok: true };
 }
 
-export async function fetchSlotsForReschedule(token: string, date: string) {
-  if (!dateRe.test(date)) return { ok: false as const, reason: "bad_date" };
+export async function fetchSlotsForReschedule(
+  token: string,
+  dateFrom: string,
+  dateTo?: string,
+) {
+  const hasta = dateTo ?? dateFrom;
+  if (!dateRe.test(dateFrom) || !dateRe.test(hasta) || hasta < dateFrom) {
+    return { ok: false as const, reason: "bad_date" };
+  }
   if (!(await manageRateOk())) return { ok: false as const, reason: "rate_limited" };
   const appt = await getAppointmentByToken(token);
   if (!appt || !appt.canModify) {
     return { ok: false as const, reason: "not_modifiable" };
   }
 
+  // Se recorta al rango reservable en vez de rechazarlo: quien pide el mes
+  // entero recibe la parte que sí se puede reagendar.
   const today = todayInTz(appt.timeZone);
-  if (date < today || date > addDays(today, appt.maxBookingDays)) {
+  const maxDate = addDays(today, appt.maxBookingDays);
+  const desde = dateFrom < today ? today : dateFrom;
+  const limite = hasta > maxDate ? maxDate : hasta;
+  if (limite < desde) {
     return {
       ok: true as const,
       slots: [],
@@ -66,8 +78,8 @@ export async function fetchSlotsForReschedule(token: string, date: string) {
     slug: appt.businessSlug,
     serviceId: appt.serviceId,
     staffId: appt.staffMemberId,
-    dateFrom: date,
-    dateTo: date,
+    dateFrom: desde,
+    dateTo: limite,
     excludeAppointmentId: appt.id,
   });
 }
