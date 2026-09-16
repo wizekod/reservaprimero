@@ -34,7 +34,7 @@ import { capitalizeFirst, cn, hexA } from "@/lib/utils";
 
 type Business = {
   name: string;
-  logo_url: string | null;
+  logo_path: string | null;
   brand_color: string | null;
   phone: string | null;
   phone_country_code: string | null;
@@ -48,8 +48,6 @@ const STEPS: Step[] = ["service", "staff", "slot", "details", "done"];
 
 const fmtPrice = (n: number) =>
   `$${new Intl.NumberFormat("es", { maximumFractionDigits: 2 }).format(n)}`;
-
-const monogram = (s: string) => s.trim().charAt(0).toUpperCase() || "?";
 
 const DOW = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
@@ -250,21 +248,13 @@ export function BookingFlow({
       <div className="mx-auto max-w-lg px-4 py-10 sm:py-14">
         {/* Cabecera del negocio */}
         <header className="mb-6 flex items-center gap-3">
-          {business.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={business.logo_url}
-              alt=""
-              className="size-12 rounded-xl border border-border object-cover"
-            />
-          ) : (
-            <span
-              className="flex size-12 items-center justify-center rounded-xl text-lg font-semibold text-white"
-              style={{ backgroundColor: accent ?? "var(--primary)" }}
-            >
-              {monogram(business.name)}
-            </span>
-          )}
+          <Avatar
+            src={mediaUrl(business.logo_path)}
+            name={business.name}
+            color={accent ?? "var(--primary)"}
+            square
+            className="size-12"
+          />
           <div className="min-w-0">
             <h1 className="truncate text-xl font-semibold tracking-tight">
               {business.name}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -11,6 +11,7 @@ import {
 import type { BusinessRow } from "@/lib/supabase/database.types";
 import { SlugField } from "@/components/businesses/slug-field";
 import { TimezoneSelect } from "@/components/businesses/timezone-select";
+import { ImageField } from "@/components/media/image-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,8 @@ export function ConfiguracionForm({
   business: BusinessRow;
   hostBase: string;
 }) {
+  // El logo sube fuera del formulario; no se puede enviar a medias.
+  const [uploading, setUploading] = useState(false);
   const [state, formAction, pending] = useActionState<
     BusinessFormState,
     FormData
@@ -160,17 +163,17 @@ export function ConfiguracionForm({
               <FieldError messages={state.fieldErrors?.address} />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="logo_url">URL del logo</Label>
-              <Input
-                id="logo_url"
-                name="logo_url"
-                type="url"
-                defaultValue={business.logo_url ?? ""}
-                placeholder="https://…"
-              />
-              <FieldError messages={state.fieldErrors?.logo_url} />
-            </div>
+            <ImageField
+              name="logo_path"
+              kind="logos"
+              businessId={business.id}
+              defaultPath={business.logo_path}
+              label="Logo"
+              fallbackName={business.name}
+              color={business.brand_color}
+              square
+              onBusyChange={setUploading}
+            />
 
             <div className="mt-2 border-t pt-4">
               <p className="text-sm font-medium">Reservas</p>
@@ -298,7 +301,7 @@ export function ConfiguracionForm({
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || uploading}>
               {pending ? "Guardando…" : "Guardar cambios"}
             </Button>
           </CardFooter>

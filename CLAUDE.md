@@ -52,7 +52,7 @@ Tabla `profiles` (extiende `auth.users` de Supabase) con columna `role` (`supera
 Tablas principales (nombres sugeridos, ajustables):
 
 - **`profiles`** — id (=auth.users.id), role, full_name, phone, business_id (nullable), avatar_url, created_at
-- **`businesses`** — id, slug (unique), name, timezone, logo_url, brand_color, phone, address, status (`active`/`suspended`/`trial`), plan_id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at, created_at
+- **`businesses`** — id, slug (unique), name, timezone, logo_path, brand_color, phone, address, status (`active`/`suspended`/`trial`), plan_id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at, created_at
 - **`subscription_plans`** — id, name (`Free`, `Premium`, etc.), stripe_price_id, monthly_booking_limit (null = ilimitado), price, features (jsonb)
 - **`services`** — id, business_id, name, description, duration_minutes, price, color, **image_path**, active, buffer_minutes (opcional)
 - **`staff_members`** — id, business_id, profile_id, display_name, active, invited_email, **color**, **avatar_path**
@@ -67,7 +67,7 @@ Tablas principales (nombres sugeridos, ajustables):
 
 **Identidad del cliente**: el teléfono. `customers.phone_key` guarda la forma E.164 y la calcula un trigger a partir de `businesses.phone_country_code` (deducido de la zona horaria). Índice único parcial `(business_id, phone_key)`. El find-or-create vive en el RPC `upsert_customer`, no en TypeScript.
 
-**Imágenes**: bucket público `media` en Supabase Storage, ruta `{business_id}/{staff|services}/{uuid}.ext`. Se guarda la ruta, no la URL. Subida directa desde el navegador (la política de `storage.objects` es el control real) con reescalado previo en canvas.
+**Imágenes**: bucket público `media` en Supabase Storage, ruta `{business_id}/{staff|services|logos}/{uuid}.ext`. Se guarda la ruta, no la URL. Subida directa desde el navegador (la política de `storage.objects` es el control real) con reescalado previo en canvas.
 
 **RLS**: políticas por `business_id = auth.jwt() -> business_id` para admin/staff; staff limitado además a `staff_member_id = auth.uid()`; superadmin con política que hace bypass (rol especial o uso de `service_role` en rutas server-side protegidas).
 

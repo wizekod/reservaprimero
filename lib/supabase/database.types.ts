@@ -194,7 +194,7 @@ export type Database = {
           cancellation_notice_hours: number
           created_at: string
           id: string
-          logo_url: string | null
+          logo_path: string | null
           max_booking_days: number
           min_booking_notice_hours: number
           name: string
@@ -220,7 +220,7 @@ export type Database = {
           cancellation_notice_hours?: number
           created_at?: string
           id?: string
-          logo_url?: string | null
+          logo_path?: string | null
           max_booking_days?: number
           min_booking_notice_hours?: number
           name: string
@@ -246,7 +246,7 @@ export type Database = {
           cancellation_notice_hours?: number
           created_at?: string
           id?: string
-          logo_url?: string | null
+          logo_path?: string | null
           max_booking_days?: number
           min_booking_notice_hours?: number
           name?: string

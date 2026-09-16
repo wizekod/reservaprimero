@@ -8,7 +8,7 @@ export const MEDIA_MAX_BYTES = 3 * 1024 * 1024;
 
 export const MEDIA_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 
-export type MediaKind = "staff" | "services";
+export type MediaKind = "staff" | "services" | "logos";
 
 /**
  * Ruta pública del objeto. Se guarda la ruta y no la URL porque ésta lleva

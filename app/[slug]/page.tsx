@@ -35,7 +35,7 @@ export default async function PublicBookingPage({
       slug={slug}
       business={{
         name: business.name,
-        logo_url: business.logo_url,
+        logo_path: business.logo_path,
         brand_color: business.brand_color,
         phone: business.phone,
         phone_country_code: business.phone_country_code,

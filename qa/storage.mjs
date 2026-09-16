@@ -79,6 +79,11 @@ try {
   ok(s2 === 200, `sube la imagen de un servicio (${s2})`);
   if (s2 === 200) subidas.push(svc);
 
+  const logo = `${bizA.id}/logos/${uuid()}.png`;
+  const s2b = await upload(ownerA.token, logo);
+  ok(s2b === 200, `sube el logo del negocio (${s2b})`);
+  if (s2b === 200) subidas.push(logo);
+
   section("2. no puede escribir en el prefijo de otro negocio");
   const ajena = `${bizB.id}/staff/${uuid()}.png`;
   const s3 = await upload(ownerA.token, ajena);
@@ -86,6 +91,9 @@ try {
 
   const s4 = await upload(ownerB.token, `${bizA.id}/staff/${uuid()}.png`);
   ok(s4 >= 400, `el dueño de B no escribe bajo A (${s4})`);
+
+  const s4b = await upload(ownerB.token, `${bizA.id}/logos/${uuid()}.png`);
+  ok(s4b >= 400, `ni le cambia el logo (${s4b})`);
 
   section("3. rutas que no son de nadie");
   for (const mala of ["suelto.png", `no-uuid/staff/${uuid()}.png`, `../${bizA.id}/x.png`]) {

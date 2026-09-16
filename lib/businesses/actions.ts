@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -13,6 +14,7 @@ import {
 } from "@/lib/businesses/queries";
 import { slugSchema, validateSlug } from "@/lib/businesses/slug";
 import { TIMEZONE_VALUES, TRIAL_DAYS } from "@/lib/businesses/constants";
+import { MEDIA_BUCKET, isOwnMediaPath } from "@/lib/storage/media";
 
 export type BusinessFormState = {
   error?: string;
@@ -59,9 +61,9 @@ const updateSchema = z.object({
     emptyToUndefined,
     z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Color hex, ej. #1e90ff").optional(),
   ),
-  logo_url: z.preprocess(
+  logo_path: z.preprocess(
     emptyToUndefined,
-    z.string().trim().url("URL inválida").optional(),
+    z.string().trim().max(300).optional(),
   ),
   min_booking_notice_hours: z.coerce
     .number()
@@ -193,7 +195,7 @@ export async function updateBusinessSettings(
     phone_country_code: formData.get("phone_country_code"),
     address: formData.get("address"),
     brand_color: formData.get("brand_color"),
-    logo_url: formData.get("logo_url"),
+    logo_path: formData.get("logo_path"),
     min_booking_notice_hours: formData.get("min_booking_notice_hours"),
     max_booking_days: formData.get("max_booking_days"),
     slot_interval_minutes: formData.get("slot_interval_minutes"),
@@ -215,6 +217,13 @@ export async function updateBusinessSettings(
     }
   }
 
+  // La ruta viene de un input oculto, o sea que es entrada del usuario: sin
+  // comprobarla se podría apuntar (y hacer borrar) un fichero de otro negocio.
+  const logo = d.logo_path ?? null;
+  if (logo && !isOwnMediaPath(logo, business.id, "logos")) {
+    return { error: "Imagen no válida." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("businesses")
@@ -226,7 +235,7 @@ export async function updateBusinessSettings(
       phone_country_code: d.phone_country_code ?? null,
       address: d.address ?? null,
       brand_color: d.brand_color ?? null,
-      logo_url: d.logo_url ?? null,
+      logo_path: logo,
       min_booking_notice_hours: d.min_booking_notice_hours,
       max_booking_days: d.max_booking_days,
       slot_interval_minutes: d.slot_interval_minutes,
@@ -255,6 +264,15 @@ export async function updateBusinessSettings(
       return { fieldErrors: { slug: ["Ese enlace ya está en uso."] } };
     }
     return { error: "No se pudieron guardar los cambios." };
+  }
+
+  // Después del UPDATE y sólo si fue bien: al revés dejaría el negocio
+  // apuntando a un fichero ya borrado.
+  if (business.logo_path && business.logo_path !== logo) {
+    const viejo = business.logo_path;
+    after(async () => {
+      await createAdminClient().storage.from(MEDIA_BUCKET).remove([viejo]);
+    });
   }
 
   revalidatePath("/dashboard/configuracion");

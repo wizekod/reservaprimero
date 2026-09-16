@@ -9,7 +9,7 @@
  * Necesita el servidor de desarrollo levantado.
  */
 import {
-  RUN, deleteBusiness, insert, ok, rest, rpc, section, summary,
+  RUN, deleteBusiness, insert, ok, rpc, section, summary,
 } from "./lib.mjs";
 
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
@@ -46,7 +46,7 @@ const bizA = await insert("businesses", {
   name: "QA Reconocer A", slug: SLUG_A, status: "trial",
   timezone: "America/Mexico_City",
 });
-const bizB = await insert("businesses", {
+await insert("businesses", {
   name: "QA Reconocer B", slug: SLUG_B, status: "trial",
   timezone: "America/Mexico_City",
 });
