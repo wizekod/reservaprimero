@@ -51,7 +51,7 @@ try {
   section("2. los datos ya guardados no se degradan");
   const r = await rest(`customers?select=name,email,phone_key&id=eq.${primero.body}`);
   const [c] = await r.json();
-  ok(c.name === "Ana Gómez", "el nombre curado no lo pisa una reserva posterior");
+  ok(c.name === "ANA GÓMEZ", "el nombre curado no lo pisa una reserva posterior (y va en mayúsculas)");
   ok(c.email === "ana@example.com", "el email se conserva");
   ok(c.phone_key === "+523319101168", "la clave queda en E.164");
 
@@ -76,7 +76,20 @@ try {
   ok(ids.size === 1, "las 5 devuelven el mismo cliente");
   ok((await countCustomers(bizA)) === antes + 1, "sólo se creó una ficha");
 
-  section("6. un teléfono no canonizable no fusiona a nadie");
+  section("6. nombre en mayúsculas, lo escriba quien lo escriba");
+  const minus = await up(bizA, "pepa de la torre", "3399998888");
+  const rp = await rest(`customers?select=name&id=eq.${minus.body}`);
+  ok((await rp.json())[0].name === "PEPA DE LA TORRE",
+    "el RPC guarda el nombre en mayúsculas");
+
+  await rest(`customers?id=eq.${minus.body}`, {
+    method: "PATCH", body: JSON.stringify({ name: "  pepa corregida  " }),
+  });
+  const rp2 = await rest(`customers?select=name&id=eq.${minus.body}`);
+  ok((await rp2.json())[0].name === "PEPA CORREGIDA",
+    "un UPDATE directo también se normaliza");
+
+  section("7. un teléfono no canonizable no fusiona a nadie");
   const basura1 = await up(bizA, "Sin teléfono", "123");
   const basura2 = await up(bizA, "Otra persona", "456");
   ok(basura1.body !== basura2.body, "dos números ilegibles no se fusionan entre sí");

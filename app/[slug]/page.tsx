@@ -38,6 +38,7 @@ export default async function PublicBookingPage({
         logo_url: business.logo_url,
         brand_color: business.brand_color,
         phone: business.phone,
+        phone_country_code: business.phone_country_code,
         address: business.address,
       }}
       services={services}

@@ -114,8 +114,8 @@ try {
   section("2. la página de staff tampoco");
   const p = await page(`/staff?d=${hoy}&v=dia`);
   ok(p.status === 200, `GET /staff = ${p.status}`);
-  ok(p.html.includes("ClienteDeAna"), "aparece su propia cita");
-  ok(!p.html.includes("ClienteDeBorja"), "NO aparece el cliente de su colega");
+  ok(p.html.includes("CLIENTEDEANA"), "aparece su propia cita");
+  ok(!p.html.includes("CLIENTEDEBORJA"), "NO aparece el cliente de su colega");
 
   section("3. ni el nombre de sus colegas");
   ok(!p.html.includes("Borja Colega"),

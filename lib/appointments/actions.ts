@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
 import { getMyBusiness, getMyBusinessAsAdmin } from "@/lib/businesses/queries";
 import { upsertCustomer } from "@/lib/customers/upsert";
+import { phoneLengthError } from "@/lib/customers/phone";
 import { APPOINTMENT_STATUSES } from "@/lib/appointments/status";
 import { getSlots } from "@/lib/availability/queries";
 import { todayInTz } from "@/lib/availability/tz";
@@ -119,6 +120,12 @@ export async function createAppointmentAsAdmin(
     };
   }
   const b = parsed.data;
+
+  const malTelefono = phoneLengthError(b.phone, business.phone_country_code);
+  if (malTelefono) {
+    return { ok: false, error: malTelefono, fieldErrors: { phone: [malTelefono] } };
+  }
+
   const admin = createAdminClient();
 
   const { data: service } = await admin

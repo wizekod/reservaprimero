@@ -8,7 +8,7 @@ export async function getPublicBusiness(slug: string) {
   const { data } = await supabase
     .from("businesses")
     .select(
-      "id, slug, name, timezone, logo_url, brand_color, phone, address, status, auto_confirm_bookings, min_booking_notice_hours, max_booking_days, cancellation_notice_hours",
+      "id, slug, name, timezone, logo_url, brand_color, phone, phone_country_code, address, status, auto_confirm_bookings, min_booking_notice_hours, max_booking_days, cancellation_notice_hours",
     )
     .eq("slug", slug)
     .maybeSingle();

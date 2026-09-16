@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { upsertCustomer } from "@/lib/customers/upsert";
+import { phoneLengthError } from "@/lib/customers/phone";
 import { notifyBookingCreated } from "@/lib/notifications/dispatch";
 import { clientEnv } from "@/lib/env";
 import { getSlots } from "@/lib/availability/queries";
@@ -26,7 +27,7 @@ async function resolveBusiness(slug: string) {
   const { data } = await admin
     .from("businesses")
     .select(
-      "id, timezone, status, auto_confirm_bookings, min_booking_notice_hours, max_booking_days",
+      "id, timezone, status, auto_confirm_bookings, min_booking_notice_hours, max_booking_days, phone_country_code",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -138,11 +139,16 @@ export async function createBooking(
 
   const { data: business } = await admin
     .from("businesses")
-    .select("id, timezone, status, auto_confirm_bookings")
+    .select("id, timezone, status, auto_confirm_bookings, phone_country_code")
     .eq("slug", b.slug)
     .maybeSingle();
   if (!business || business.status === "suspended") {
     return { ok: false, error: "Negocio no disponible." };
+  }
+
+  const malTelefono = phoneLengthError(b.phone, business.phone_country_code);
+  if (malTelefono) {
+    return { ok: false, error: malTelefono, fieldErrors: { phone: [malTelefono] } };
   }
 
   if (!(await isWithinMonthlyBookingLimit(business.id, business.timezone))) {

@@ -27,6 +27,7 @@ export default async function NuevaReservaPage() {
         services={services}
         minDate={today}
         maxDate={addDays(today, business.max_booking_days)}
+        dialCode={business.phone_country_code}
       />
     </div>
   );

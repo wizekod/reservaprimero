@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
 import type { FormState } from "@/lib/forms";
 import type { CustomerRow } from "@/lib/supabase/database.types";
+import { expectedPhoneDigits } from "@/lib/customers/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,18 +31,33 @@ function FieldError({ messages }: { messages?: string[] }) {
 export function CustomerForm({
   action,
   customer,
+  dialCode,
   title,
   submitLabel,
 }: {
   action: CustomerAction;
   customer?: CustomerRow;
+  /** Prefijo del país del negocio: fija cuántos dígitos se esperan. */
+  dialCode: string | null;
   title: string;
   submitLabel: string;
 }) {
+  const digitos = expectedPhoneDigits(dialCode);
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     action,
     {},
   );
+
+  // Campos controlados a propósito: React 19 reinicia los inputs no
+  // controlados cuando termina la acción, así que un error de validación
+  // (p. ej. un teléfono corto) borraría todo lo escrito.
+  const [form, setForm] = useState({
+    phone: customer?.phone ?? "",
+    name: customer?.name ?? "",
+    email: customer?.email ?? "",
+  });
+  const set = (k: keyof typeof form) => (v: string) =>
+    setForm((f) => ({ ...f, [k]: v }));
 
   useEffect(() => {
     if (state.message) toast.success(state.message);
@@ -63,27 +79,21 @@ export function CustomerForm({
           ) : null}
 
           <div className="grid gap-2">
-            <Label htmlFor="name">Nombre</Label>
-            <Input
-              id="name"
-              name="name"
-              defaultValue={customer?.name ?? ""}
-              required
-              minLength={2}
-              maxLength={80}
-            />
-            <FieldError messages={state.fieldErrors?.name} />
-          </div>
-
-          <div className="grid gap-2">
             <Label htmlFor="phone">Teléfono</Label>
             <Input
               id="phone"
               name="phone"
               type="tel"
-              defaultValue={customer?.phone ?? ""}
+              inputMode="tel"
+              value={form.phone}
+              onChange={(e) => set("phone")(e.target.value)}
               maxLength={30}
             />
+            {digitos ? (
+              <p className="text-xs text-muted-foreground">
+                {digitos} dígitos.
+              </p>
+            ) : null}
             {customer?.phone_key ? (
               <p className="text-xs text-muted-foreground">
                 Se reconoce como{" "}
@@ -105,12 +115,27 @@ export function CustomerForm({
           </div>
 
           <div className="grid gap-2">
+            <Label htmlFor="name">Nombre</Label>
+            <Input
+              id="name"
+              name="name"
+              value={form.name}
+              onChange={(e) => set("name")(e.target.value.toUpperCase())}
+              required
+              minLength={2}
+              maxLength={80}
+            />
+            <FieldError messages={state.fieldErrors?.name} />
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="email">Correo</Label>
             <Input
               id="email"
               name="email"
               type="email"
-              defaultValue={customer?.email ?? ""}
+              value={form.email}
+              onChange={(e) => set("email")(e.target.value)}
             />
             <FieldError messages={state.fieldErrors?.email} />
           </div>

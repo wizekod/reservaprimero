@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { expectedPhoneDigits } from "@/lib/customers/phone";
 import { capitalizeFirst, cn } from "@/lib/utils";
 
 type Slot = { start: string; staffMemberId: string };
@@ -27,12 +28,15 @@ export function NewBookingForm({
   services,
   minDate,
   maxDate,
+  dialCode,
 }: {
   slug: string;
   services: PublicService[];
   minDate: string;
   maxDate: string;
+  dialCode: string | null;
 }) {
+  const digitos = expectedPhoneDigits(dialCode);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -67,7 +71,7 @@ export function NewBookingForm({
       setKnown(res.name);
       setForm((f) => ({
         ...f,
-        name: f.name.trim() === "" ? res.name : f.name,
+        name: f.name.trim() === "" ? res.name.toUpperCase() : f.name,
         email: f.email.trim() === "" ? (res.email ?? "") : f.email,
       }));
     });
@@ -297,13 +301,8 @@ export function NewBookingForm({
             </p>
           ) : null}
           <div className="grid gap-3">
-            <Field
-              id="name"
-              label="Nombre"
-              value={form.name}
-              onChange={(v) => setForm({ ...form, name: v })}
-              errors={errors.name}
-            />
+            {/* El teléfono va primero: es lo que identifica al cliente, así
+                que al escribirlo se rellena solo el resto. */}
             <Field
               id="phone"
               label="Teléfono"
@@ -314,8 +313,21 @@ export function NewBookingForm({
                 setKnown(null);
               }}
               onBlur={recognise}
-              hint={known ? `Cliente ya registrado: ${known}` : undefined}
+              hint={
+                known
+                  ? `Cliente ya registrado: ${known}`
+                  : digitos
+                    ? `${digitos} dígitos.`
+                    : undefined
+              }
               errors={errors.phone}
+            />
+            <Field
+              id="name"
+              label="Nombre"
+              value={form.name}
+              onChange={(v) => setForm({ ...form, name: v.toUpperCase() })}
+              errors={errors.name}
             />
             <Field
               id="email"

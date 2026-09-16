@@ -7,7 +7,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getMyBusinessAsAdmin } from "@/lib/businesses/queries";
 import { getProfile } from "@/lib/auth/dal";
-import { phoneKey } from "@/lib/customers/phone";
+import { phoneKey, phoneLengthError } from "@/lib/customers/phone";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
 
 const customerSchema = z.object({
@@ -38,6 +38,19 @@ function parse(formData: FormData) {
 const DUPLICADO =
   "Ya tienes un cliente con ese teléfono. Búscalo en la lista en vez de crear otra ficha.";
 
+/**
+ * El largo del teléfono depende del país del negocio, que no se conoce hasta
+ * tener el negocio en la mano, así que no cabe en el esquema de zod.
+ */
+function validarTelefono(
+  phone: string | undefined,
+  dial: string | null,
+): FormState | null {
+  if (!phone) return null;
+  const error = phoneLengthError(phone, dial);
+  return error ? { fieldErrors: { phone: [error] } } : null;
+}
+
 export async function createCustomer(
   _prev: FormState,
   formData: FormData,
@@ -50,6 +63,9 @@ export async function createCustomer(
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
   }
   const d = parsed.data;
+
+  const malTelefono = validarTelefono(d.phone, business.phone_country_code);
+  if (malTelefono) return malTelefono;
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -87,6 +103,9 @@ export async function updateCustomer(
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
   }
   const d = parsed.data;
+
+  const malTelefono = validarTelefono(d.phone, business.phone_country_code);
+  if (malTelefono) return malTelefono;
 
   const supabase = await createClient();
   const { error } = await supabase

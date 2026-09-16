@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/ui/avatar";
 import { mediaUrl } from "@/lib/storage/media";
+import { expectedPhoneDigits } from "@/lib/customers/phone";
 import { capitalizeFirst, cn } from "@/lib/utils";
 
 type Business = {
@@ -33,6 +34,7 @@ type Business = {
   logo_url: string | null;
   brand_color: string | null;
   phone: string | null;
+  phone_country_code: string | null;
   address: string | null;
 };
 
@@ -87,6 +89,7 @@ export function BookingFlow({
   } | null>(null);
 
   const accent = business.brand_color ?? undefined;
+  const digitos = expectedPhoneDigits(business.phone_country_code);
   const accentStyle = accent
     ? ({ "--brand": accent } as React.CSSProperties)
     : undefined;
@@ -425,19 +428,20 @@ export function BookingFlow({
               ) : null}
 
               <Field
-                id="name"
-                label="Nombre"
-                value={form.name}
-                onChange={(v) => setForm({ ...form, name: v })}
-                errors={errors.name}
-              />
-              <Field
                 id="phone"
                 label="Teléfono"
                 type="tel"
                 value={form.phone}
                 onChange={(v) => setForm({ ...form, phone: v })}
+                hint={digitos ? `${digitos} dígitos.` : undefined}
                 errors={errors.phone}
+              />
+              <Field
+                id="name"
+                label="Nombre"
+                value={form.name}
+                onChange={(v) => setForm({ ...form, name: v.toUpperCase() })}
+                errors={errors.name}
               />
               <Field
                 id="email"
@@ -607,6 +611,7 @@ function Field({
   value,
   onChange,
   errors,
+  hint,
   type = "text",
 }: {
   id: string;
@@ -614,6 +619,7 @@ function Field({
   value: string;
   onChange: (v: string) => void;
   errors?: string[];
+  hint?: string;
   type?: string;
 }) {
   return (
@@ -624,7 +630,9 @@ function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        className={id === "name" ? "uppercase" : undefined}
       />
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       {errors?.length ? (
         <p className="text-sm text-destructive">{errors[0]}</p>
       ) : null}

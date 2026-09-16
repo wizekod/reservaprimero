@@ -65,6 +65,7 @@ export default async function ClientePage({
       <CustomerForm
         action={updateCustomer}
         customer={customer}
+        dialCode={business.phone_country_code}
         title={customer.name}
         submitLabel="Guardar cambios"
       />
