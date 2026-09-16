@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getMyBusiness } from "@/lib/businesses/queries";
+import { getMyBusinessAsAdmin } from "@/lib/businesses/queries";
 import { MEDIA_BUCKET, isOwnMediaPath } from "@/lib/storage/media";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
 
@@ -61,7 +61,7 @@ export async function createService(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { error: "No autorizado." };
 
   const parsed = parse(formData);
@@ -96,7 +96,7 @@ export async function updateService(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { error: "No autorizado." };
 
   const id = formData.get("id");
@@ -155,7 +155,7 @@ export async function setServiceActive(
   id: string,
   active: boolean,
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();
@@ -173,7 +173,7 @@ export async function setServiceActive(
 export async function deleteService(
   id: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();

@@ -8,7 +8,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientEnv } from "@/lib/env";
-import { getMyBusiness } from "@/lib/businesses/queries";
+import { getMyBusinessAsAdmin } from "@/lib/businesses/queries";
 import { nextStaffColor } from "@/lib/staff/palette";
 import { MEDIA_BUCKET, isOwnMediaPath } from "@/lib/storage/media";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
@@ -84,7 +84,7 @@ export async function createStaff(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { error: "No autorizado." };
 
   const parsed = createSchema.safeParse({
@@ -137,7 +137,7 @@ export async function updateStaff(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { error: "No autorizado." };
 
   const id = formData.get("id");
@@ -196,7 +196,7 @@ export async function updateStaff(
 export async function deleteStaff(
   id: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();
@@ -219,7 +219,7 @@ export async function deleteStaff(
 export async function resendInvite(
   staffId: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();
@@ -241,7 +241,7 @@ export async function setStaffServices(
   staffId: string,
   serviceIds: string[],
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();

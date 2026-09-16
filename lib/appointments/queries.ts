@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
 import { getMyBusiness } from "@/lib/businesses/queries";
+import { getProfile } from "@/lib/auth/dal";
 
 export type AgendaAppointment = {
   id: string;
@@ -82,13 +83,24 @@ export type StaffOption = {
 export async function listStaffOptions(): Promise<StaffOption[]> {
   const business = await getMyBusiness();
   if (!business) return [];
+
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("staff_members")
     .select("id, display_name, color, avatar_path")
     .eq("business_id", business.id)
-    .eq("active", true)
-    .order("display_name");
+    .eq("active", true);
+
+  // Un miembro del staff sólo tiene sus propias citas, así que un filtro por
+  // profesional no le sirve de nada y sólo le enseña la plantilla del negocio.
+  // La RLS no lo recorta porque `staff_members` es de lectura pública (la
+  // página de reservas necesita listar a los profesionales).
+  const profile = await getProfile();
+  if (profile?.role === "staff") {
+    query = query.eq("profile_id", profile.id);
+  }
+
+  const { data } = await query.order("display_name");
   return (data ?? []).map((s) => ({
     id: s.id,
     name: s.display_name,

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
-import { getMyBusiness } from "@/lib/businesses/queries";
+import { getMyBusiness, getMyBusinessAsAdmin } from "@/lib/businesses/queries";
 import { upsertCustomer } from "@/lib/customers/upsert";
 import { APPOINTMENT_STATUSES } from "@/lib/appointments/status";
 import { getSlots } from "@/lib/availability/queries";
@@ -104,7 +104,10 @@ export type AdminBookingResult =
 export async function createAppointmentAsAdmin(
   raw: AdminBookingInput,
 ): Promise<AdminBookingResult> {
-  const business = await getMyBusiness();
+  // Admin, no `getMyBusiness()`: esto escribe con el cliente service_role y
+  // puede elegir cualquier profesional del negocio, así que un staff no debe
+  // poder invocarlo para llenarle la agenda a un compañero.
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const parsed = adminBookingSchema.safeParse(raw);

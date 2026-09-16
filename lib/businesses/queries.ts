@@ -23,6 +23,22 @@ export const getMyBusiness = cache(async (): Promise<BusinessRow | null> => {
 });
 
 /**
+ * Negocio del usuario actual **sólo si es su administrador**.
+ *
+ * `getMyBusiness()` también devuelve negocio para un perfil `staff`, que
+ * legítimamente lo necesita (zona horaria, nombre, ajustes de reserva). Por eso
+ * no vale como autorización: cualquier acción de servidor que escriba con el
+ * cliente `service_role` — que salta la RLS — tiene que usar ésta, o un staff
+ * podría, por ejemplo, crear citas en la agenda de un compañero invocando la
+ * acción directamente.
+ */
+export async function getMyBusinessAsAdmin(): Promise<BusinessRow | null> {
+  const profile = await getProfile();
+  if (profile?.role !== "business_admin") return null;
+  return getMyBusiness();
+}
+
+/**
  * ¿El slug está libre? Usa el cliente admin (lectura) porque RLS impide a un
  * admin ver negocios ajenos. `exceptBusinessId` permite conservar el propio
  * slug al editar.

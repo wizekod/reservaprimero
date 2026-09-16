@@ -7,7 +7,10 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth/dal";
-import { getMyBusiness, isSlugAvailable } from "@/lib/businesses/queries";
+import {
+  getMyBusinessAsAdmin,
+  isSlugAvailable,
+} from "@/lib/businesses/queries";
 import { slugSchema, validateSlug } from "@/lib/businesses/slug";
 import { TIMEZONE_VALUES, TRIAL_DAYS } from "@/lib/businesses/constants";
 
@@ -177,7 +180,7 @@ export async function updateBusinessSettings(
   _prev: BusinessFormState,
   formData: FormData,
 ): Promise<BusinessFormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) {
     return { error: "No autorizado." };
   }

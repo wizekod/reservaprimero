@@ -93,6 +93,31 @@ export async function createUser(email, password = "Qa-passw0rd!") {
   return { uid: u.id, token: sess.access_token };
 }
 
+/**
+ * Cookie de sesión con el formato de `@supabase/ssr`, para pedir páginas del
+ * servidor de desarrollo como ese usuario (y no sólo la API REST).
+ */
+export function sessionCookie(session) {
+  const ref = new URL(URL_BASE).hostname.split(".")[0];
+  const value = `base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`;
+  return `sb-${ref}-auth-token=${value}`;
+}
+
+/** Inicia sesión y devuelve el objeto de sesión completo. */
+export async function login(email, password = "Qa-passw0rd!") {
+  const r = await fetch(`${URL_BASE}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      apikey: need("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+  const s = await r.json();
+  if (!r.ok) throw new Error(`login: ${JSON.stringify(s)}`);
+  return s;
+}
+
 export async function deleteUser(uid) {
   await fetch(`${URL_BASE}/auth/v1/admin/users/${uid}`, {
     method: "DELETE",

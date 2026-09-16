@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import { getMyBusiness } from "@/lib/businesses/queries";
+import { getMyBusinessAsAdmin } from "@/lib/businesses/queries";
 import { getProfile } from "@/lib/auth/dal";
 import { phoneKey } from "@/lib/customers/phone";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
@@ -42,7 +42,7 @@ export async function createCustomer(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { error: "No autorizado." };
 
   const parsed = parse(formData);
@@ -76,7 +76,7 @@ export async function updateCustomer(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { error: "No autorizado." };
 
   const id = formData.get("id");
@@ -112,7 +112,7 @@ export async function updateCustomer(
 export async function deleteCustomer(
   id: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();
@@ -143,7 +143,7 @@ export async function deleteCustomer(
 export async function lookupCustomerByPhone(phone: string): Promise<
   { found: false } | { found: true; id: string; name: string; email: string | null }
 > {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { found: false };
 
   const key = phoneKey(phone, business.phone_country_code);
@@ -177,7 +177,7 @@ export async function addCustomerNote(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   const profile = await getProfile();
   if (!business || !profile) return { error: "No autorizado." };
 
@@ -209,7 +209,7 @@ export async function toggleNotePinned(
   id: string,
   pinned: boolean,
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();
@@ -230,7 +230,7 @@ export async function toggleNotePinned(
 export async function deleteCustomerNote(
   id: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const business = await getMyBusiness();
+  const business = await getMyBusinessAsAdmin();
   if (!business) return { ok: false, error: "No autorizado." };
 
   const supabase = await createClient();
