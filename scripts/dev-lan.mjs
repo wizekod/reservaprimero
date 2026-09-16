@@ -41,5 +41,12 @@ console.log(`  (misma red wifi; si no carga, revisa el cortafuegos de macOS)\n`)
 
 spawn("npx", ["next", "dev", "-H", "0.0.0.0"], {
   stdio: "inherit",
-  env: { ...process.env, NEXT_PUBLIC_APP_URL: url },
+  env: {
+    ...process.env,
+    NEXT_PUBLIC_APP_URL: url,
+    // Lo lee next.config.ts: sin declarar este origen, Next bloquea sus
+    // recursos de desarrollo (HMR, acciones de servidor) al venir de una IP
+    // que no es localhost, y en el móvil los botones no harían nada.
+    DEV_LAN_HOST: ip,
+  },
 }).on("exit", (code) => process.exit(code ?? 0));
