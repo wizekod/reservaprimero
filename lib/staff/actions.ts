@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { clientEnv } from "@/lib/env";
 import { getMyBusiness } from "@/lib/businesses/queries";
+import { nextStaffColor } from "@/lib/staff/palette";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
 
 const nameField = z
@@ -21,9 +22,19 @@ const emailOpt = z.preprocess(
   z.string().trim().toLowerCase().email("Correo inválido").optional(),
 );
 
+const colorOpt = z.preprocess(
+  emptyToUndefined,
+  z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color hex, ej. #6366f1")
+    .optional(),
+);
+
 const createSchema = z.object({ display_name: nameField, email: emailOpt });
 const updateSchema = z.object({
   display_name: nameField,
+  color: colorOpt,
   active: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
 });
 
@@ -78,12 +89,21 @@ export async function createStaff(
   const { display_name, email } = parsed.data;
 
   const supabase = await createClient();
+
+  // Color automático: en el calendario, un profesional sin color se pierde
+  // entre los demás, y nadie entra a Staff a elegir uno antes de usarlo.
+  const { data: usados } = await supabase
+    .from("staff_members")
+    .select("color")
+    .eq("business_id", business.id);
+
   const { data: member, error } = await supabase
     .from("staff_members")
     .insert({
       business_id: business.id,
       display_name,
       invited_email: email ?? null,
+      color: nextStaffColor((usados ?? []).map((s) => s.color)),
     })
     .select("id")
     .single();
@@ -117,6 +137,7 @@ export async function updateStaff(
 
   const parsed = updateSchema.safeParse({
     display_name: formData.get("display_name"),
+    color: formData.get("color"),
     active: formData.get("active"),
   });
   if (!parsed.success) {
@@ -128,6 +149,7 @@ export async function updateStaff(
     .from("staff_members")
     .update({
       display_name: parsed.data.display_name,
+      color: parsed.data.color ?? null,
       active: parsed.data.active,
     })
     .eq("id", id)

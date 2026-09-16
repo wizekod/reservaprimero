@@ -1,23 +1,53 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
-import type { AgendaAppointment } from "@/lib/appointments/queries";
+import type { AgendaAppointment, StaffOption } from "@/lib/appointments/queries";
 import {
   APPOINTMENT_STATUSES,
   STATUS_BADGE,
   STATUS_BLOCK,
   STATUS_DOT,
   STATUS_LABEL,
+  STATUS_STRIPE,
 } from "@/lib/appointments/status";
 import { addDays, addMonths, zonedDateAndMinutes } from "@/lib/availability/tz";
 import { AppointmentActions } from "@/components/appointments/appointment-actions";
 import { Button } from "@/components/ui/button";
-import { capitalizeFirst, cn } from "@/lib/utils";
+import { capitalizeFirst, cn, hexA } from "@/lib/utils";
 
 export type CalendarView = "dia" | "semana" | "mes";
+
+/**
+ * El relleno del bloque identifica al PROFESIONAL y la franja izquierda el
+ * ESTADO (clase `STATUS_STRIPE`). Como el color del profesional es un hex
+ * guardado en la base, tiene que ir por `style`; sólo se tiñen tres lados
+ * para no pisar la franja.
+ *
+ * Una cita cancelada renuncia al color del profesional: si no, se confundiría
+ * con una activa suya.
+ */
+function blockTint(a: AgendaAppointment): {
+  className: string;
+  style: CSSProperties;
+} {
+  if (a.status === "cancelled" || !a.staffColor) {
+    return { className: STATUS_BLOCK[a.status], style: {} };
+  }
+  const borde = hexA(a.staffColor, 0.45);
+  return {
+    className: "text-foreground",
+    style: {
+      backgroundColor: hexA(a.staffColor, 0.16),
+      borderTopColor: borde,
+      borderRightColor: borde,
+      borderBottomColor: borde,
+    },
+  };
+}
 
 const HOUR_PX = 56;
 const DEFAULT_START_HOUR = 8;
@@ -92,7 +122,7 @@ export function CalendarView({
   timeZone: string;
   days: string[];
   appointments: AgendaAppointment[];
-  staff: { id: string; name: string }[];
+  staff: StaffOption[];
   rangeLabel: string;
   monthAnchor: string;
 }) {
@@ -237,6 +267,7 @@ export function CalendarView({
                 key={s.id}
                 active={staffId === s.id}
                 onClick={() => setStaffId(s.id)}
+                color={s.color}
               >
                 {s.name}
               </FilterChip>
@@ -245,14 +276,15 @@ export function CalendarView({
         </div>
       ) : null}
 
-      {/* Leyenda de estados */}
+      {/* Leyenda: la franja izquierda de cada bloque codifica el estado */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <span className="text-xs text-muted-foreground">Estado</span>
         {APPOINTMENT_STATUSES.map((s) => (
           <span
             key={s}
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
           >
-            <span className={cn("size-2 rounded-full", STATUS_DOT[s])} />
+            <span className={cn("h-3 w-1 rounded-sm", STATUS_DOT[s])} />
             {STATUS_LABEL[s]}
           </span>
         ))}
@@ -327,33 +359,28 @@ export function CalendarView({
                         (p.end - p.start) * (HOUR_PX / 60) - 2,
                         20,
                       );
+                      const tint = blockTint(p.appt);
                       return (
                         <button
                           key={p.appt.id}
                           type="button"
-                          title={`${STATUS_LABEL[p.appt.status]} · ${p.appt.serviceName}`}
+                          title={`${p.appt.staffName} · ${STATUS_LABEL[p.appt.status]} · ${p.appt.serviceName}`}
                           onClick={() => setSelectedId(p.appt.id)}
                           className={cn(
-                            "absolute overflow-hidden rounded-md border px-1.5 py-1 text-left text-[11px] leading-tight transition-shadow hover:shadow-md",
-                            STATUS_BLOCK[p.appt.status],
+                            "absolute overflow-hidden rounded-md border border-l-4 px-1.5 py-1 text-left text-[11px] leading-tight transition-shadow hover:shadow-md",
+                            STATUS_STRIPE[p.appt.status],
+                            tint.className,
                           )}
                           style={{
+                            ...tint.style,
                             top,
                             height,
                             left: `calc(${(p.lane / p.lanes) * 100}% + 2px)`,
                             width: `calc(${100 / p.lanes}% - 4px)`,
                           }}
                         >
-                          <span className="flex items-center gap-1 truncate font-medium">
-                            {p.appt.serviceColor ? (
-                              <span
-                                className="size-1.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: p.appt.serviceColor }}
-                              />
-                            ) : null}
-                            <span className="truncate">
-                              {hhmm(p.start)} {p.appt.customerName}
-                            </span>
+                          <span className="block truncate font-medium">
+                            {hhmm(p.start)} {p.appt.customerName}
                           </span>
                           {height >= 36 ? (
                             <span className="block truncate opacity-80">
@@ -375,6 +402,9 @@ export function CalendarView({
         <DetailSheet
           appt={selected}
           timeZone={timeZone}
+          customerHref={
+            basePath.startsWith("/dashboard") ? "/dashboard/clientes" : null
+          }
           onClose={() => setSelectedId(null)}
         />
       ) : null}
@@ -382,13 +412,19 @@ export function CalendarView({
   );
 }
 
+/**
+ * Además de filtrar, estos chips hacen de leyenda de profesionales: la muestra
+ * de color es la misma con la que se tiñen sus citas en la rejilla.
+ */
 function FilterChip({
   active,
   onClick,
+  color,
   children,
 }: {
   active: boolean;
   onClick: () => void;
+  color?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -396,12 +432,19 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
         active
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:bg-muted",
       )}
     >
+      {color ? (
+        <span
+          aria-hidden
+          className="size-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+      ) : null}
       {children}
     </button>
   );
@@ -461,16 +504,31 @@ function MonthGrid({
                 {Number(d.slice(8))}
               </span>
               <span className="mt-1 hidden space-y-0.5 sm:block">
+                {/* Mismo lenguaje que la rejilla: punto = profesional,
+                    franja izquierda = estado. */}
                 {items.slice(0, 2).map((it) => (
                   <span
                     key={it.appt.id}
-                    className="flex items-center gap-1 truncate px-1 text-[10px] text-foreground"
+                    title={`${it.appt.staffName} · ${STATUS_LABEL[it.appt.status]}`}
+                    className={cn(
+                      "flex items-center gap-1 truncate border-l-2 px-1 text-[10px]",
+                      STATUS_STRIPE[it.appt.status],
+                      it.appt.status === "cancelled"
+                        ? "text-muted-foreground line-through"
+                        : "text-foreground",
+                    )}
                   >
                     <span
+                      aria-hidden
                       className={cn(
                         "size-1.5 shrink-0 rounded-full",
-                        STATUS_DOT[it.appt.status],
+                        it.appt.staffColor ? "" : STATUS_DOT[it.appt.status],
                       )}
+                      style={
+                        it.appt.staffColor
+                          ? { backgroundColor: it.appt.staffColor }
+                          : undefined
+                      }
                     />
                     <span className="truncate">
                       {hhmm(it.start)} {it.appt.customerName}
@@ -499,10 +557,12 @@ function MonthGrid({
 function DetailSheet({
   appt,
   timeZone,
+  customerHref,
   onClose,
 }: {
   appt: AgendaAppointment;
   timeZone: string;
+  customerHref: string | null;
   onClose: () => void;
 }) {
   const when = capitalizeFirst(
@@ -538,11 +598,41 @@ function DetailSheet({
         <p className="text-sm text-muted-foreground">{when}</p>
 
         <dl className="mt-4 space-y-1.5 text-sm">
-          <Row label="Cliente" value={appt.customerName} />
+          <Row
+            label="Cliente"
+            value={
+              // Sólo el panel del negocio tiene ficha de cliente; el de staff
+              // reusa este mismo calendario y no debe enlazar ahí.
+              customerHref && appt.customerId ? (
+                <Link
+                  href={`${customerHref}/${appt.customerId}`}
+                  className="underline underline-offset-4"
+                >
+                  {appt.customerName}
+                </Link>
+              ) : (
+                appt.customerName
+              )
+            }
+          />
           {appt.customerPhone ? (
             <Row label="Teléfono" value={appt.customerPhone} />
           ) : null}
-          <Row label="Profesional" value={appt.staffName} />
+          <Row
+            label="Profesional"
+            value={
+              <span className="inline-flex items-center gap-1.5">
+                {appt.staffColor ? (
+                  <span
+                    aria-hidden
+                    className="size-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: appt.staffColor }}
+                  />
+                ) : null}
+                {appt.staffName}
+              </span>
+            }
+          />
           {appt.notes ? <Row label="Nota" value={appt.notes} /> : null}
         </dl>
 
@@ -554,7 +644,7 @@ function DetailSheet({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex gap-2">
       <dt className="w-24 shrink-0 text-muted-foreground">{label}</dt>

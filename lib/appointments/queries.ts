@@ -15,6 +15,9 @@ export type AgendaAppointment = {
   servicePrice: number;
   serviceColor: string | null;
   staffName: string;
+  staffColor: string | null;
+  staffAvatarUrl: string | null;
+  customerId: string;
   customerName: string;
   customerPhone: string | null;
 };
@@ -36,8 +39,8 @@ export async function listAppointments(
     .select(
       `id, status, start_at, end_at, notes, staff_member_id,
        services ( name, color, price ),
-       staff_members ( display_name ),
-       customers ( name, phone )`,
+       staff_members ( display_name, color, avatar_url ),
+       customers ( id, name, phone )`,
     )
     .eq("business_id", business.id)
     .gte("start_at", fromISO)
@@ -59,6 +62,9 @@ export async function listAppointments(
       servicePrice: Number(service?.price ?? 0),
       serviceColor: service?.color ?? null,
       staffName: staff?.display_name ?? "—",
+      staffColor: staff?.color ?? null,
+      staffAvatarUrl: staff?.avatar_url ?? null,
+      customerId: customer?.id ?? "",
       customerName: customer?.name ?? "—",
       customerPhone: customer?.phone ?? null,
     };
@@ -66,17 +72,27 @@ export async function listAppointments(
 }
 
 /** Staff activo del negocio actual (para filtros del calendario). */
-export async function listStaffOptions(): Promise<
-  { id: string; name: string }[]
-> {
+export type StaffOption = {
+  id: string;
+  name: string;
+  color: string | null;
+  avatarUrl: string | null;
+};
+
+export async function listStaffOptions(): Promise<StaffOption[]> {
   const business = await getMyBusiness();
   if (!business) return [];
   const supabase = await createClient();
   const { data } = await supabase
     .from("staff_members")
-    .select("id, display_name")
+    .select("id, display_name, color, avatar_url")
     .eq("business_id", business.id)
     .eq("active", true)
     .order("display_name");
-  return (data ?? []).map((s) => ({ id: s.id, name: s.display_name }));
+  return (data ?? []).map((s) => ({
+    id: s.id,
+    name: s.display_name,
+    color: s.color,
+    avatarUrl: s.avatar_url,
+  }));
 }

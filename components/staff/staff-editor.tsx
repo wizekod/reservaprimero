@@ -12,6 +12,8 @@ import {
 import type { FormState } from "@/lib/forms";
 import type { ServiceRow } from "@/lib/supabase/database.types";
 import type { StaffMemberWithMeta } from "@/lib/staff/queries";
+import { STAFF_COLORS } from "@/lib/staff/palette";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,6 +125,16 @@ export function StaffEditor({
               ) : null}
             </div>
 
+            <div className="grid gap-2">
+              <Label>Color en el calendario</Label>
+              <ColorPicker defaultValue={staff.color} />
+              {state.fieldErrors?.color?.length ? (
+                <p className="text-sm text-destructive">
+                  {state.fieldErrors.color[0]}
+                </p>
+              ) : null}
+            </div>
+
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -200,6 +212,46 @@ export function StaffEditor({
           </CardFooter>
         ) : null}
       </Card>
+    </div>
+  );
+}
+
+/**
+ * Muestras de la paleta + un color libre. Se escribe en un input oculto para
+ * que viaje con el `<form action={formAction}>` como un campo más.
+ */
+function ColorPicker({ defaultValue }: { defaultValue: string | null }) {
+  const [color, setColor] = useState(defaultValue ?? STAFF_COLORS[0]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="color" value={color} />
+      {STAFF_COLORS.map((c) => (
+        <button
+          key={c}
+          type="button"
+          onClick={() => setColor(c)}
+          aria-label={`Color ${c}`}
+          aria-pressed={color.toLowerCase() === c.toLowerCase()}
+          className={cn(
+            "size-7 rounded-full border-2 transition-transform",
+            color.toLowerCase() === c.toLowerCase()
+              ? "scale-110 border-foreground"
+              : "border-transparent hover:scale-105",
+          )}
+          style={{ backgroundColor: c }}
+        />
+      ))}
+      <label className="ml-1 inline-flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          className="size-7 cursor-pointer rounded border border-border bg-transparent p-0.5"
+          aria-label="Otro color"
+        />
+        Otro
+      </label>
     </div>
   );
 }

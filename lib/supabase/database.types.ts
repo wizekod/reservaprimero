@@ -509,7 +509,9 @@ export type Database = {
       staff_members: {
         Row: {
           active: boolean
+          avatar_url: string | null
           business_id: string
+          color: string | null
           created_at: string
           display_name: string
           id: string
@@ -519,7 +521,9 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          avatar_url?: string | null
           business_id: string
+          color?: string | null
           created_at?: string
           display_name: string
           id?: string
@@ -529,7 +533,9 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          avatar_url?: string | null
           business_id?: string
+          color?: string | null
           created_at?: string
           display_name?: string
           id?: string
