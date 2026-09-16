@@ -54,14 +54,20 @@ Tablas principales (nombres sugeridos, ajustables):
 - **`profiles`** — id (=auth.users.id), role, full_name, phone, business_id (nullable), avatar_url, created_at
 - **`businesses`** — id, slug (unique), name, timezone, logo_url, brand_color, phone, address, status (`active`/`suspended`/`trial`), plan_id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_ends_at, created_at
 - **`subscription_plans`** — id, name (`Free`, `Premium`, etc.), stripe_price_id, monthly_booking_limit (null = ilimitado), price, features (jsonb)
-- **`services`** — id, business_id, name, description, duration_minutes, price, color, active, buffer_minutes (opcional)
-- **`staff_members`** — id, business_id, profile_id, display_name, active
+- **`services`** — id, business_id, name, description, duration_minutes, price, color, **image_path**, active, buffer_minutes (opcional)
+- **`staff_members`** — id, business_id, profile_id, display_name, active, invited_email, **color**, **avatar_path**
 - **`staff_services`** — (tabla puente) staff_member_id, service_id — qué servicios puede realizar cada staff
 - **`availability_rules`** — id, staff_member_id, day_of_week (0-6), start_time, end_time — horario semanal recurrente
 - **`availability_exceptions`** — id, staff_member_id, date, is_closed, start_time, end_time — feriados, días libres, horario especial
-- **`customers`** — id, business_id, name, phone, email, notes, created_at — CRM ligero por negocio
+- **`customers`** — id, business_id, name, phone, **phone_key**, email, created_at — CRM ligero por negocio
+- **`customer_notes`** — id, business_id, customer_id, appointment_id, author_id, body, pinned, created_at — historia clínica. Tabla aparte y no columna de `customers` porque el staff lee la ficha del cliente y la RLS filtra filas, no columnas
 - **`appointments`** — id, business_id, service_id, staff_member_id, customer_id, start_at (timestamptz), end_at, status (`pending`/`confirmed`/`cancelled`/`completed`/`no_show`), cancel_token, notes, created_at
-- **`notifications_log`** — id, appointment_id, channel (`email`/`whatsapp`), type (`confirmation`/`reminder`/`cancellation`), status, sent_at
+- **`notifications_log`** — id, appointment_id, channel (`email`/`whatsapp`), type (`confirmation`/`reminder`/`cancellation`), **recipient** (`customer`/`business`/`staff`), status, sent_at
+- **`daily_digest_log`** — id, business_id, staff_member_id (null = dueño), local_date, sent_at — idempotencia del resumen diario, que no cabe en `notifications_log` porque agrupa N citas
+
+**Identidad del cliente**: el teléfono. `customers.phone_key` guarda la forma E.164 y la calcula un trigger a partir de `businesses.phone_country_code` (deducido de la zona horaria). Índice único parcial `(business_id, phone_key)`. El find-or-create vive en el RPC `upsert_customer`, no en TypeScript.
+
+**Imágenes**: bucket público `media` en Supabase Storage, ruta `{business_id}/{staff|services}/{uuid}.ext`. Se guarda la ruta, no la URL. Subida directa desde el navegador (la política de `storage.objects` es el control real) con reescalado previo en canvas.
 
 **RLS**: políticas por `business_id = auth.jwt() -> business_id` para admin/staff; staff limitado además a `staff_member_id = auth.uid()`; superadmin con política que hace bypass (rol especial o uso de `service_role` en rutas server-side protegidas).
 
@@ -121,7 +127,7 @@ Esta es la lista completa de lo que hace ReservaSimple hoy. Tú decides qué mov
 |---|---|
 | Sincronización con Google Calendar | OAuth por staff (ver disponibilidad externa) + botón "agregar a mi calendario" para el cliente |
 | Estadísticas y reportes | citas totales, facturación estimada, servicios más pedidos, tasa de asistencia |
-| CRM ligero de clientes | historial de citas, notas por cliente |
+| ~~CRM ligero de clientes~~ ✅ | historial de citas, historia clínica por cliente, identidad por teléfono |
 | Widget embebible (botón / iFrame) para sitios externos | WordPress, Wix, sitio propio, etc. |
 | Notificación interna al negocio vía Discord/Slack webhook | equivalente a lo que hace ReservaSimple con Discord |
 | Reservas grupales / clases (ej. yoga, clases grupales) | si aplica a tus verticales objetivo |
@@ -247,7 +253,9 @@ CRON_SECRET=
 ### Fase 2
 - [ ] Google Calendar sync (OAuth por staff)
 - [~] Estadísticas/reportes en dashboard admin — versión básica ya en `/dashboard/estadisticas` (citas por estado, facturación estimada, top servicios, tasa de asistencia). Faltan gráficos y comparativas.
-- [ ] CRM ligero de clientes
+- [X] CRM ligero de clientes — `/dashboard/clientes` (listado con buscador por nombre o sufijo de teléfono, alta manual, ficha con datos + historia clínica + historial de citas). El teléfono identifica al cliente: un mismo número escrito de tres formas es una sola ficha. La historia clínica (`customer_notes`) sólo la ve el admin del negocio, ni el staff ni el superadmin.
+- [X] Color y foto por profesional; imagen por servicio — color en el calendario (relleno = profesional, franja = estado) y subida real a Supabase Storage.
+- [X] Avisos al equipo — resumen diario de agenda + aviso de cita nueva/cancelada/reagendada. En modo protegido sin `RESEND_API_KEY`.
 - [ ] Widget embebible
 - [ ] Webhook Discord/Slack para notificación interna
 

@@ -14,6 +14,23 @@ npx supabase link --project-ref <REF>
 npx supabase db push
 ```
 
+Las migraciones crean también el bucket de Storage `media` (avatares del staff
+e imágenes de servicio) con sus políticas. Si `db push` se queja con
+`must be owner of table objects` al crear las políticas de `storage.objects`,
+créalas una vez desde Studio → Storage → Policies copiando el SQL de
+`supabase/migrations/20260915150000_media_storage.sql`; el resto de la
+migración sí se aplica.
+
+### Comprobación rápida tras desplegar
+
+```bash
+./qa/run.sh          # suite end-to-end contra el Supabase real
+```
+
+Necesita `.env.local` con `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` y `SUPABASE_SERVICE_ROLE_KEY`. Cada script crea
+sus propios negocios con slug `qa-…` y los borra al terminar.
+
 ## 2. Variables de entorno en Vercel
 
 | Variable | Necesaria para | Dónde se obtiene |
@@ -53,9 +70,16 @@ npx supabase db push
 
 ## 5. Vercel Cron
 
-`vercel.json` ya define el cron de recordatorios (`/api/cron/reminders`, cada
-30 min). En Hobby el mínimo es diario; para cada 30 min se necesita plan Pro.
-Vercel envía `Authorization: Bearer $CRON_SECRET` automáticamente.
+`vercel.json` ya define el cron (`/api/cron/reminders`, cada 30 min). Esa ruta
+hace dos cosas: los recordatorios de cita al cliente (24 h y 2 h antes) y el
+resumen diario de agenda al equipo, que sale a la hora local configurada por
+cada negocio en Configuración → Avisos al equipo.
+
+En Hobby el mínimo es diario; para cada 30 min se necesita plan Pro. **Con un
+cron diario los recordatorios de 2 h dejan de ser fiables** (la ventana de
+captura es de 35 min), pero el resumen diario sigue funcionando si la hora del
+cron coincide con la hora configurada. Vercel envía
+`Authorization: Bearer $CRON_SECRET` automáticamente.
 
 ## 6. Checklist de QA manual antes de anunciar
 
