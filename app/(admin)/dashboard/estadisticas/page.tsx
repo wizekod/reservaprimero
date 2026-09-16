@@ -5,14 +5,12 @@ import { listAppointments } from "@/lib/appointments/queries";
 import { addDays, todayInTz, wallTimeToInstant } from "@/lib/availability/tz";
 import { STATUS_BADGE, STATUS_LABEL } from "@/lib/appointments/status";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
+import { formatMoney } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Estadísticas · ReservaPrimero" };
 
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
 const STATUSES: AppointmentStatus[] = ["confirmed", "cancelled", "no_show"];
-
-const money = (n: number) =>
-  new Intl.NumberFormat("es", { maximumFractionDigits: 0 }).format(n);
 
 export default async function EstadisticasPage({
   searchParams,
@@ -113,7 +111,7 @@ export default async function EstadisticasPage({
         <Stat label="Citas" value={String(appointments.length)} />
         <Stat
           label="Facturación estimada"
-          value={money(revenue)}
+          value={formatMoney(revenue)}
           hint="citas atendidas"
         />
         <Stat label="Atendidas" value={String(atendidas)} />
@@ -155,7 +153,7 @@ export default async function EstadisticasPage({
                   <div className="flex justify-between text-sm">
                     <span className="truncate font-medium">{name}</span>
                     <span className="shrink-0 text-muted-foreground">
-                      {s.count} · {money(s.revenue)}
+                      {s.count} · {formatMoney(s.revenue)}
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">

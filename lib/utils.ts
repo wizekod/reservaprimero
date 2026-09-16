@@ -16,6 +16,25 @@ export function capitalizeFirst(text: string): string {
 }
 
 /**
+ * Importe con símbolo y dos decimales: `$1,250.00`.
+ *
+ * Único formateador de dinero de la app, para que el precio de un servicio se
+ * vea igual en la lista del panel, en la página de reservas y en las
+ * estadísticas.
+ *
+ * Se fija la convención de México y buena parte de LatAm —coma para los miles,
+ * punto para los decimales—: no hay ajuste de moneda por negocio, y uno
+ * español esperaría "1.250,00 €". El día que haga falta, esto es lo único que
+ * hay que tocar.
+ */
+export function formatMoney(n: number): string {
+  return `$${new Intl.NumberFormat("es-MX", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)}`
+}
+
+/**
  * Iniciales para cuando no hay foto. Dos para una persona ("Ana García" → AG)
  * y una sola para un nombre de una palabra.
  */

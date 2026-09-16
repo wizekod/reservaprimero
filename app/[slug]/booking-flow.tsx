@@ -30,7 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/ui/avatar";
 import { mediaUrl } from "@/lib/storage/media";
 import { expectedPhoneDigits, phoneLengthError } from "@/lib/customers/phone";
-import { capitalizeFirst, cn, hexA } from "@/lib/utils";
+import { capitalizeFirst, cn, formatMoney, hexA } from "@/lib/utils";
 
 type Business = {
   name: string;
@@ -45,9 +45,6 @@ type ChosenSlot = { start: string; staffMemberId: string };
 type Step = "service" | "staff" | "slot" | "details" | "done";
 
 const STEPS: Step[] = ["service", "staff", "slot", "details", "done"];
-
-const fmtPrice = (n: number) =>
-  `$${new Intl.NumberFormat("es", { maximumFractionDigits: 2 }).format(n)}`;
 
 const DOW = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
@@ -365,7 +362,7 @@ export function BookingFlow({
                             </span>
                             <span className="flex items-center gap-1.5 font-semibold">
                               <Tag className="size-4 text-muted-foreground" />
-                              {fmtPrice(s.price)}
+                              {formatMoney(s.price)}
                             </span>
                           </span>
                         </span>
@@ -490,7 +487,7 @@ export function BookingFlow({
                 <SummaryRow label="Hora" value={timeFmt(slot.start)} />
                 <SummaryRow label="Pago" value="En el establecimiento" />
                 {service ? (
-                  <SummaryRow label="Total" value={fmtPrice(service.price)} />
+                  <SummaryRow label="Total" value={formatMoney(service.price)} />
                 ) : null}
               </Panel>
 

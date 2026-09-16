@@ -5,17 +5,12 @@ import { listServices } from "@/lib/services/queries";
 import { buttonVariants } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { mediaUrl } from "@/lib/storage/media";
+import { formatMoney } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { ServiceRowActions } from "./service-row-actions";
 
 export const metadata: Metadata = { title: "Servicios · ReservaPrimero" };
-
-function fmtPrice(n: number) {
-  return new Intl.NumberFormat("es", {
-    maximumFractionDigits: 2,
-  }).format(n);
-}
 
 export default async function ServiciosPage() {
   const services = await listServices();
@@ -82,7 +77,7 @@ export default async function ServiciosPage() {
                     ) : null}
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {s.duration_minutes} min · {fmtPrice(s.price)}
+                    {s.duration_minutes} min · {formatMoney(s.price)}
                     {s.buffer_minutes > 0
                       ? ` · +${s.buffer_minutes} min de margen`
                       : ""}
