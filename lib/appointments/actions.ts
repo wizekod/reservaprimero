@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
 import { getMyBusiness } from "@/lib/businesses/queries";
+import { upsertCustomer } from "@/lib/customers/upsert";
 import { APPOINTMENT_STATUSES } from "@/lib/appointments/status";
 import { getSlots } from "@/lib/availability/queries";
 import { todayInTz } from "@/lib/availability/tz";
@@ -153,35 +154,14 @@ export async function createAppointmentAsAdmin(
     return { ok: false, error: "Ese horario ya no está disponible." };
   }
 
-  const phone = b.phone.replace(/[^\d+]/g, "");
-  const orFilter = b.email
-    ? `phone.eq.${phone},email.eq.${b.email}`
-    : `phone.eq.${phone}`;
-  const { data: existing } = await admin
-    .from("customers")
-    .select("id")
-    .eq("business_id", business.id)
-    .or(orFilter)
-    .limit(1)
-    .maybeSingle();
-
-  let customerId = existing?.id;
-  if (!customerId) {
-    const { data: created, error } = await admin
-      .from("customers")
-      .insert({
-        business_id: business.id,
-        name: b.name,
-        phone,
-        email: b.email ?? null,
-      })
-      .select("id")
-      .single();
-    if (error || !created) {
-      return { ok: false, error: "No se pudo registrar al cliente." };
-    }
-    customerId = created.id;
-  }
+  const cust = await upsertCustomer(admin, {
+    businessId: business.id,
+    name: b.name,
+    phone: b.phone,
+    email: b.email ?? null,
+  });
+  if (!cust.ok) return { ok: false, error: cust.error };
+  const customerId = cust.customerId;
 
   const endISO = new Date(
     new Date(startISO).getTime() + service.duration_minutes * 60_000,

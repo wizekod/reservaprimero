@@ -43,6 +43,14 @@ const updateSchema = z.object({
   slug: slugSchema,
   timezone: timezoneField,
   phone: z.preprocess(emptyToUndefined, z.string().trim().max(30).optional()),
+  phone_country_code: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .trim()
+      .regex(/^[1-9][0-9]{0,3}$/, "Sólo dígitos, ej. 52")
+      .optional(),
+  ),
   address: z.preprocess(emptyToUndefined, z.string().trim().max(200).optional()),
   brand_color: z.preprocess(
     emptyToUndefined,
@@ -170,6 +178,7 @@ export async function updateBusinessSettings(
     slug: formData.get("slug"),
     timezone: formData.get("timezone"),
     phone: formData.get("phone"),
+    phone_country_code: formData.get("phone_country_code"),
     address: formData.get("address"),
     brand_color: formData.get("brand_color"),
     logo_url: formData.get("logo_url"),
@@ -200,6 +209,7 @@ export async function updateBusinessSettings(
       slug: d.slug,
       timezone: d.timezone,
       phone: d.phone ?? null,
+      phone_country_code: d.phone_country_code ?? null,
       address: d.address ?? null,
       brand_color: d.brand_color ?? null,
       logo_url: d.logo_url ?? null,
@@ -213,6 +223,19 @@ export async function updateBusinessSettings(
 
   if (error) {
     if (error.code === "23505") {
+      // Cambiar el prefijo recalcula la clave telefónica de los clientes del
+      // negocio (trigger `businesses_resync_phone_keys`); si dos fichas pasan
+      // a compartir número, el índice único aborta. Son datos que hay que
+      // revisar a mano, no fusionar a ciegas.
+      if (error.message.includes("phone_key")) {
+        return {
+          fieldErrors: {
+            phone_country_code: [
+              "Con ese prefijo dos clientes quedarían con el mismo teléfono. Revísalos antes de cambiarlo.",
+            ],
+          },
+        };
+      }
       return { fieldErrors: { slug: ["Ese enlace ya está en uso."] } };
     }
     return { error: "No se pudieron guardar los cambios." };

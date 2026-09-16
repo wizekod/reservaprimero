@@ -130,6 +130,25 @@ export function ConfiguracionForm({
             </div>
 
             <div className="grid gap-2">
+              <Label htmlFor="phone_country_code">Prefijo telefónico del país</Label>
+              <Input
+                id="phone_country_code"
+                name="phone_country_code"
+                inputMode="numeric"
+                defaultValue={business.phone_country_code ?? ""}
+                placeholder="52"
+                maxLength={4}
+                className="sm:max-w-32"
+              />
+              <p className="text-xs text-muted-foreground">
+                Sirve para reconocer a un cliente que ya reservó aunque escriba
+                su número de otra forma (52 México · 34 España · 56 Chile · 54
+                Argentina).
+              </p>
+              <FieldError messages={state.fieldErrors?.phone_country_code} />
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="address">Dirección</Label>
               <Textarea
                 id="address"

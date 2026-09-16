@@ -199,6 +199,7 @@ export type Database = {
           min_booking_notice_hours: number
           name: string
           phone: string | null
+          phone_country_code: string | null
           plan_id: string | null
           slot_interval_minutes: number
           slug: string
@@ -222,6 +223,7 @@ export type Database = {
           min_booking_notice_hours?: number
           name: string
           phone?: string | null
+          phone_country_code?: string | null
           plan_id?: string | null
           slot_interval_minutes?: number
           slug: string
@@ -245,6 +247,7 @@ export type Database = {
           min_booking_notice_hours?: number
           name?: string
           phone?: string | null
+          phone_country_code?: string | null
           plan_id?: string | null
           slot_interval_minutes?: number
           slug?: string
@@ -266,6 +269,64 @@ export type Database = {
           },
         ]
       }
+      customer_notes: {
+        Row: {
+          appointment_id: string | null
+          author_id: string | null
+          body: string
+          business_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          pinned: boolean
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          author_id?: string | null
+          body: string
+          business_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          pinned?: boolean
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          author_id?: string | null
+          body?: string
+          business_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          pinned?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_customer_fk"
+            columns: ["customer_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           business_id: string
@@ -273,8 +334,8 @@ export type Database = {
           email: string | null
           id: string
           name: string
-          notes: string | null
           phone: string | null
+          phone_key: string | null
           updated_at: string
         }
         Insert: {
@@ -283,8 +344,8 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
-          notes?: string | null
           phone?: string | null
+          phone_key?: string | null
           updated_at?: string
         }
         Update: {
@@ -293,8 +354,8 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
-          notes?: string | null
           phone?: string | null
+          phone_key?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -568,12 +629,26 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      customer_phone_key: {
+        Args: { dial: string; raw: string }
+        Returns: string
+      }
       is_business_admin: {
         Args: { target_business_id: string }
         Returns: boolean
       }
       is_server_role: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      phone_dial_code: { Args: { tz: string }; Returns: string }
+      upsert_customer: {
+        Args: {
+          p_business_id: string
+          p_email?: string
+          p_name: string
+          p_phone: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       appointment_status:
@@ -732,6 +807,7 @@ export const Constants = {
     },
   },
 } as const
+
 // ── Aliases de dominio (añadidos a mano; conservar al regenerar con
 //    `npx supabase gen types typescript --project-id <ref> > lib/supabase/database.types.ts`) ──
 export type UserRole = Enums<"user_role">;
@@ -743,3 +819,5 @@ export type BusinessRow = Tables<"businesses">;
 export type SubscriptionPlanRow = Tables<"subscription_plans">;
 export type ServiceRow = Tables<"services">;
 export type StaffMemberRow = Tables<"staff_members">;
+export type CustomerRow = Tables<"customers">;
+export type CustomerNoteRow = Tables<"customer_notes">;

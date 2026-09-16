@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { upsertCustomer } from "@/lib/customers/upsert";
 import { notifyBookingCreated } from "@/lib/notifications/dispatch";
 import { clientEnv } from "@/lib/env";
 import { getSlots } from "@/lib/availability/queries";
@@ -196,36 +197,15 @@ export async function createBooking(
     new Date(startISO).getTime() + service.duration_minutes * 60_000,
   ).toISOString();
 
-  // find-or-create del cliente dentro del negocio.
-  const phone = b.phone.replace(/[^\d+]/g, "");
-  const orFilter = b.email
-    ? `phone.eq.${phone},email.eq.${b.email}`
-    : `phone.eq.${phone}`;
-  const { data: existing } = await admin
-    .from("customers")
-    .select("id")
-    .eq("business_id", business.id)
-    .or(orFilter)
-    .limit(1)
-    .maybeSingle();
-
-  let customerId = existing?.id;
-  if (!customerId) {
-    const { data: created, error: custError } = await admin
-      .from("customers")
-      .insert({
-        business_id: business.id,
-        name: b.name,
-        phone,
-        email: b.email ?? null,
-      })
-      .select("id")
-      .single();
-    if (custError || !created) {
-      return { ok: false, error: "No se pudo registrar tus datos." };
-    }
-    customerId = created.id;
-  }
+  // find-or-create del cliente dentro del negocio, por teléfono canónico.
+  const cust = await upsertCustomer(admin, {
+    businessId: business.id,
+    name: b.name,
+    phone: b.phone,
+    email: b.email ?? null,
+  });
+  if (!cust.ok) return { ok: false, error: "No se pudo registrar tus datos." };
+  const customerId = cust.customerId;
 
   const status = business.auto_confirm_bookings ? "confirmed" : "pending";
 
