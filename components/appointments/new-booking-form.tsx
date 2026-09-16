@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   fetchSlots,
@@ -13,7 +12,8 @@ import {
 import { createAppointmentAsAdmin } from "@/lib/appointments/actions";
 import { lookupCustomerByPhone } from "@/lib/customers/actions";
 import type { PublicService } from "@/lib/booking/queries";
-import { addDays } from "@/lib/availability/tz";
+import { startOfMonth } from "@/lib/availability/tz";
+import { MonthCalendar, SlotGrid } from "@/components/booking/month-calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +44,7 @@ export function NewBookingForm({
   const [staffList, setStaffList] = useState<BookableStaff[]>([]);
   const [staffId, setStaffId] = useState<string | null>(null);
   const [date, setDate] = useState(minDate);
+  const [month, setMonth] = useState(() => startOfMonth(minDate));
   const [tz, setTz] = useState("UTC");
   const [slots, setSlots] = useState<Slot[]>([]);
   const [slotsLoaded, setSlotsLoaded] = useState(false);
@@ -240,68 +241,39 @@ export function NewBookingForm({
         {/* Día y hora */}
         {serviceId && slotsLoaded ? (
           <Section title="3 · Día y hora">
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                aria-label="Día anterior"
-                disabled={pending || date <= minDate}
-                onClick={() => changeDate(addDays(date, -1))}
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <label className="relative flex-1">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium">
-                  {dateChip(date)}
-                </span>
-                <Input
-                  type="date"
-                  value={date}
-                  min={minDate}
-                  max={maxDate}
-                  onChange={(e) => changeDate(e.target.value)}
-                  className="text-transparent [&::-webkit-calendar-picker-indicator]:opacity-60"
-                />
-              </label>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                aria-label="Día siguiente"
-                disabled={pending || date >= maxDate}
-                onClick={() => changeDate(addDays(date, 1))}
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
+            {/* En el panel hay sitio de sobra: el calendario a la izquierda y
+                las horas al lado, en vez de una rejilla enorme apilada. */}
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:gap-6">
+              <MonthCalendar
+                month={month}
+                onMonth={setMonth}
+                selected={date}
+                minDate={minDate}
+                maxDate={maxDate}
+                onPick={changeDate}
+              />
 
-            <div className="mt-3">
-              {pending ? (
-                <p className="text-sm text-muted-foreground">Buscando horarios…</p>
-              ) : slots.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
-                  Sin horarios disponibles ese día.
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                  {slots.map((s) => (
-                    <button
-                      key={s.start}
-                      type="button"
-                      onClick={() => setSlot(s)}
-                      className={cn(
-                        "rounded-lg border py-2 text-sm font-medium tabular-nums transition-colors",
-                        slot?.start === s.start
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border hover:border-primary hover:bg-accent",
-                      )}
-                    >
-                      {timeFmt(s.start)}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                {pending ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Buscando horarios…
+                  </p>
+                ) : slots.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No hay horarios disponibles ese día. Prueba con otra fecha.
+                  </p>
+                ) : (
+                  <SlotGrid
+                    slots={slots.map((s) => s.start)}
+                    label={timeFmt}
+                    selected={slot?.start ?? null}
+                    onPick={(start) => {
+                      const elegido = slots.find((s) => s.start === start);
+                      if (elegido) setSlot(elegido);
+                    }}
+                  />
+                )}
+              </div>
             </div>
           </Section>
         ) : null}

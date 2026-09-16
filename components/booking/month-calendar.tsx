@@ -115,17 +115,20 @@ export function MonthCalendar({
                   ? "invisible"
                   : elegido
                     ? "text-white"
-                    : reservable
-                      ? "hover:brightness-95"
-                      : "bg-muted/60 text-muted-foreground/60",
+                    : !reservable
+                      ? "bg-muted/60 text-muted-foreground/60"
+                      : accent
+                        ? "hover:brightness-95"
+                        : // Sin color de marca —el panel del negocio— se usa el
+                          // de la app. Por clases y no por `style`, o el día
+                          // disponible saldría en sólido en vez de con tinte.
+                          "bg-primary/10 text-primary hover:bg-primary/20",
               )}
               style={
                 elegido
                   ? { backgroundColor: accent ?? "var(--primary)" }
-                  : reservable
-                    ? accent
-                      ? { backgroundColor: hexA(accent, 0.12), color: accent }
-                      : { backgroundColor: "var(--primary)", color: "white" }
+                  : reservable && accent
+                    ? { backgroundColor: hexA(accent, 0.12), color: accent }
                     : undefined
               }
             >
@@ -138,16 +141,24 @@ export function MonthCalendar({
   );
 }
 
-/** Rejilla de horas libres, con el mismo aspecto en reserva y reagendado. */
+/**
+ * Rejilla de horas libres, con el mismo aspecto en reserva, reagendado y alta
+ * manual desde el panel.
+ *
+ * `selected` sólo lo usa el alta manual: allí elegir la hora no avanza de
+ * pantalla, así que hay que verla marcada.
+ */
 export function SlotGrid({
   slots,
   label,
   onPick,
+  selected,
   disabled,
 }: {
   slots: string[];
   label: (iso: string) => string;
   onPick: (iso: string) => void;
+  selected?: string | null;
   disabled?: boolean;
 }) {
   return (
@@ -158,7 +169,13 @@ export function SlotGrid({
           type="button"
           disabled={disabled}
           onClick={() => onPick(s)}
-          className="rounded-xl bg-muted py-3 text-sm font-medium tabular-nums transition-colors hover:bg-accent disabled:opacity-50"
+          aria-pressed={selected === undefined ? undefined : selected === s}
+          className={cn(
+            "rounded-xl py-3 text-sm font-medium tabular-nums transition-colors disabled:opacity-50",
+            selected === s
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted hover:bg-accent",
+          )}
         >
           {label(s)}
         </button>
