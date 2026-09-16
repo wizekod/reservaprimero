@@ -198,11 +198,13 @@ export type Database = {
           max_booking_days: number
           min_booking_notice_hours: number
           name: string
+          notify_staff_on_booking: boolean
           phone: string | null
           phone_country_code: string | null
           plan_id: string | null
           slot_interval_minutes: number
           slug: string
+          staff_digest_hour: number
           status: Database["public"]["Enums"]["business_status"]
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -222,11 +224,13 @@ export type Database = {
           max_booking_days?: number
           min_booking_notice_hours?: number
           name: string
+          notify_staff_on_booking?: boolean
           phone?: string | null
           phone_country_code?: string | null
           plan_id?: string | null
           slot_interval_minutes?: number
           slug: string
+          staff_digest_hour?: number
           status?: Database["public"]["Enums"]["business_status"]
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -246,11 +250,13 @@ export type Database = {
           max_booking_days?: number
           min_booking_notice_hours?: number
           name?: string
+          notify_staff_on_booking?: boolean
           phone?: string | null
           phone_country_code?: string | null
           plan_id?: string | null
           slot_interval_minutes?: number
           slug?: string
+          staff_digest_hour?: number
           status?: Database["public"]["Enums"]["business_status"]
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -364,6 +370,45 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_digest_log: {
+        Row: {
+          business_id: string
+          id: string
+          local_date: string
+          sent_at: string
+          staff_member_id: string | null
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          local_date: string
+          sent_at?: string
+          staff_member_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          local_date?: string
+          sent_at?: string
+          staff_member_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_digest_log_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_digest_log_staff_member_id_fkey"
+            columns: ["staff_member_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
             referencedColumns: ["id"]
           },
         ]

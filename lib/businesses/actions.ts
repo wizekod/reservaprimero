@@ -87,6 +87,15 @@ const updateSchema = z.object({
     (v) => v === "on" || v === "true" || v === true,
     z.boolean(),
   ),
+  notify_staff_on_booking: z.preprocess(
+    (v) => v === "on" || v === "true" || v === true,
+    z.boolean(),
+  ),
+  staff_digest_hour: z.coerce
+    .number()
+    .int()
+    .min(0, "Entre 0 y 23")
+    .max(23, "Entre 0 y 23"),
 });
 
 /** Alta de negocio: crea `businesses` + enlaza `profiles.business_id`. */
@@ -187,6 +196,8 @@ export async function updateBusinessSettings(
     slot_interval_minutes: formData.get("slot_interval_minutes"),
     cancellation_notice_hours: formData.get("cancellation_notice_hours"),
     auto_confirm_bookings: formData.get("auto_confirm_bookings"),
+    notify_staff_on_booking: formData.get("notify_staff_on_booking"),
+    staff_digest_hour: formData.get("staff_digest_hour"),
   });
   if (!parsed.success) {
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
@@ -218,6 +229,8 @@ export async function updateBusinessSettings(
       slot_interval_minutes: d.slot_interval_minutes,
       cancellation_notice_hours: d.cancellation_notice_hours,
       auto_confirm_bookings: d.auto_confirm_bookings,
+      notify_staff_on_booking: d.notify_staff_on_booking,
+      staff_digest_hour: d.staff_digest_hour,
     })
     .eq("id", business.id);
 

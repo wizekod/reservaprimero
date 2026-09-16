@@ -10,7 +10,7 @@ import { sendEmail, type SendResult } from "@/lib/notifications/email";
 import { sendWhatsApp, toWhatsAppAddress } from "@/lib/notifications/whatsapp";
 
 type NotificationType = Enums<"notification_type">; // confirmation | reminder | cancellation
-type Recipient = "customer" | "business";
+type Recipient = "customer" | "business" | "staff";
 
 type Ctx = {
   id: string;
@@ -26,6 +26,8 @@ type Ctx = {
   customerEmail: string | null;
   customerPhone: string | null;
   ownerEmail: string | null;
+  staffEmail: string | null;
+  notifyStaff: boolean;
 };
 
 type Nested<T> = T | T[] | null;
@@ -38,9 +40,9 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     .select(
       `id, status, start_at, cancel_token, business_id,
        services ( name ),
-       staff_members ( display_name ),
+       staff_members ( display_name, invited_email, profile_id ),
        customers ( name, email, phone ),
-       businesses ( name, timezone, plan_id )`,
+       businesses ( name, timezone, plan_id, notify_staff_on_booking )`,
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -76,6 +78,15 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     ownerEmail = u.user?.email ?? null;
   }
 
+  // Correo del profesional: si aceptó la invitación vale el de su cuenta; si
+  // sigue invitado, aquel al que se le escribió. Un staff creado sin correo
+  // es inalcanzable y se omite sin error.
+  let staffEmail: string | null = staff.invited_email;
+  if (staff.profile_id) {
+    const { data: su } = await admin.auth.admin.getUserById(staff.profile_id);
+    staffEmail = su.user?.email ?? staffEmail;
+  }
+
   return {
     id: data.id,
     status: data.status,
@@ -90,6 +101,8 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     customerEmail: customer.email,
     customerPhone: customer.phone,
     ownerEmail,
+    staffEmail,
+    notifyStaff: business.notify_staff_on_booking,
   };
 }
 
@@ -158,6 +171,7 @@ async function deliver(
     subject: string;
     customerText: string;
     ownerText?: string;
+    staffText?: string;
     skipDedupe?: boolean;
   },
 ) {
@@ -195,6 +209,21 @@ async function deliver(
       await logSend(ctx.id, "email", type, "business", offset, r);
     }
   }
+
+  // Aviso al profesional asignado. Sólo de lo que le cambia la agenda: el
+  // recordatorio de 24h/2h de cada cita no se le duplica a propósito, porque
+  // con ocho citas al día serían dieciséis mensajes. Para eso está el resumen
+  // diario (lib/notifications/daily-digest.ts).
+  if (opts.staffText && ctx.staffEmail && ctx.notifyStaff) {
+    if (opts.skipDedupe || !(await alreadySent(ctx.id, "email", type, "staff", offset))) {
+      const r = await sendEmail({
+        to: ctx.staffEmail,
+        subject: `[${ctx.businessName}] ${opts.subject}`,
+        text: opts.staffText,
+      });
+      await logSend(ctx.id, "email", type, "staff", offset, r);
+    }
+  }
 }
 
 async function clearSentLogs(appointmentId: string, type: NotificationType) {
@@ -222,6 +251,9 @@ export async function notifyBookingCreated(appointmentId: string): Promise<void>
     ownerText:
       `Nueva reserva: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.staffName}\n` +
       `Cliente: ${ctx.customerName}${ctx.customerPhone ? ` (${ctx.customerPhone})` : ""}`,
+    staffText:
+      `${ctx.staffName}, tienes una cita nueva: ${ctx.serviceName} el ${whenText(ctx)}.\n` +
+      `Cliente: ${ctx.customerName}${ctx.customerPhone ? ` (${ctx.customerPhone})` : ""}`,
   });
 }
 
@@ -247,6 +279,9 @@ export async function notifyBookingCancelled(appointmentId: string): Promise<voi
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} del ${whenText(ctx)} ` +
       `ha sido cancelada.`,
     ownerText: `Reserva cancelada: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.customerName}`,
+    staffText:
+      `${ctx.staffName}, se canceló tu cita de ${ctx.serviceName} del ${whenText(ctx)} ` +
+      `con ${ctx.customerName}.`,
   });
 }
 
@@ -261,6 +296,9 @@ export async function notifyBookingRescheduled(appointmentId: string): Promise<v
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} quedó para el ${whenText(ctx)} ` +
       `con ${ctx.staffName}.\n\nGestionar: ${manageUrl(ctx)}`,
     ownerText: `Reserva reagendada: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.customerName}`,
+    staffText:
+      `${ctx.staffName}, tu cita de ${ctx.serviceName} con ${ctx.customerName} ` +
+      `se movió al ${whenText(ctx)}.`,
   });
 }
 

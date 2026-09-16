@@ -260,6 +260,42 @@ export function ConfiguracionForm({
               Confirmar reservas automáticamente (si lo desactivas, quedan
               pendientes de tu aprobación)
             </label>
+
+            <div className="border-t border-border pt-4">
+              <h3 className="text-sm font-semibold">Avisos al equipo</h3>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Cada profesional recibe su agenda del día por correo, y un
+                aviso cuando le agendan o le cancelan una cita. No se le
+                repiten los recordatorios de cada cita.
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="notify_staff_on_booking"
+                defaultChecked={business.notify_staff_on_booking}
+                className="size-4"
+              />
+              Avisar a cada profesional de los cambios en su agenda
+            </label>
+
+            <div className="grid gap-2 sm:max-w-48">
+              <Label htmlFor="staff_digest_hour">Hora del resumen diario</Label>
+              <Input
+                id="staff_digest_hour"
+                name="staff_digest_hour"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={23}
+                defaultValue={business.staff_digest_hour}
+              />
+              <p className="text-xs text-muted-foreground">
+                Hora local del negocio (0-23).
+              </p>
+              <FieldError messages={state.fieldErrors?.staff_digest_hour} />
+            </div>
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={pending}>
