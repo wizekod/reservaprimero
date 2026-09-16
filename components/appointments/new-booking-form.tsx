@@ -11,6 +11,7 @@ import {
   type BookableStaff,
 } from "@/lib/booking/actions";
 import { createAppointmentAsAdmin } from "@/lib/appointments/actions";
+import { lookupCustomerByPhone } from "@/lib/customers/actions";
 import type { PublicService } from "@/lib/booking/queries";
 import { addDays } from "@/lib/availability/tz";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,30 @@ export function NewBookingForm({
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [known, setKnown] = useState<string | null>(null);
+
+  /**
+   * Al salir del teléfono se mira si ese número ya es de un cliente del
+   * negocio y se completan sus datos. Sólo aquí, no en la página pública:
+   * allí permitiría averiguar quién es cliente probando números.
+   */
+  function recognise() {
+    const phone = form.phone.trim();
+    if (phone.length < 6) return;
+    startTransition(async () => {
+      const res = await lookupCustomerByPhone(phone);
+      if (!res.found) {
+        setKnown(null);
+        return;
+      }
+      setKnown(res.name);
+      setForm((f) => ({
+        ...f,
+        name: f.name.trim() === "" ? res.name : f.name,
+        email: f.email.trim() === "" ? (res.email ?? "") : f.email,
+      }));
+    });
+  }
 
   const service = services.find((s) => s.id === serviceId) ?? null;
 
@@ -284,7 +309,12 @@ export function NewBookingForm({
               label="Teléfono"
               type="tel"
               value={form.phone}
-              onChange={(v) => setForm({ ...form, phone: v })}
+              onChange={(v) => {
+                setForm({ ...form, phone: v });
+                setKnown(null);
+              }}
+              onBlur={recognise}
+              hint={known ? `Cliente ya registrado: ${known}` : undefined}
               errors={errors.phone}
             />
             <Field
@@ -373,14 +403,18 @@ function Field({
   label,
   value,
   onChange,
+  onBlur,
   errors,
+  hint,
   type = "text",
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   errors?: string[];
+  hint?: string;
   type?: string;
 }) {
   return (
@@ -391,7 +425,9 @@ function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
       />
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       {errors?.length ? (
         <p className="text-sm text-destructive">{errors[0]}</p>
       ) : null}
