@@ -17,6 +17,7 @@ import {
   createBooking,
   fetchSlots,
   getBookableStaff,
+  lookupPublicCustomer,
   type BookableStaff,
 } from "@/lib/booking/actions";
 import type { PublicService } from "@/lib/booking/queries";
@@ -28,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/ui/avatar";
 import { mediaUrl } from "@/lib/storage/media";
-import { expectedPhoneDigits } from "@/lib/customers/phone";
+import { expectedPhoneDigits, phoneLengthError } from "@/lib/customers/phone";
 import { capitalizeFirst, cn, hexA } from "@/lib/utils";
 
 type Business = {
@@ -99,6 +100,7 @@ export function BookingFlow({
   const [tsToken, setTsToken] = useState("");
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [known, setKnown] = useState<string | null>(null);
   const [result, setResult] = useState<{
     status: "confirmed" | "pending";
     manageUrl: string;
@@ -162,9 +164,46 @@ export function BookingFlow({
     loadSlots(d, staffId);
   }
 
+  /**
+   * Al salir del teléfono: se valida el largo en el acto —esperar a pulsar
+   * "Confirmar" para decir que falta un dígito es tarde— y, si el número está
+   * completo, se mira si ya es cliente para no hacerle reescribir sus datos.
+   */
+  function onPhoneBlur() {
+    const error = phoneLengthError(form.phone, business.phone_country_code);
+    if (form.phone.trim() === "") return;
+    if (error) {
+      setErrors((e) => ({ ...e, phone: [error] }));
+      setKnown(null);
+      return;
+    }
+    setErrors((e) => ({ ...e, phone: undefined }));
+    startTransition(async () => {
+      const res = await lookupPublicCustomer(slug, form.phone);
+      if (!res.found) {
+        setKnown(null);
+        return;
+      }
+      setKnown(res.name);
+      setForm((f) => ({
+        ...f,
+        name: f.name.trim() === "" ? res.name : f.name,
+        email: f.email.trim() === "" ? (res.email ?? "") : f.email,
+      }));
+    });
+  }
+
   function submit() {
     setErrors({});
     setFormError(null);
+
+    // Se corta aquí para no gastar el token de Turnstile ni un intento del
+    // límite por IP en algo que ya se sabe inválido.
+    const malTelefono = phoneLengthError(form.phone, business.phone_country_code);
+    if (malTelefono) {
+      setErrors({ phone: [malTelefono] });
+      return;
+    }
     startTransition(async () => {
       const res = await createBooking({
         slug,
@@ -481,8 +520,19 @@ export function BookingFlow({
                   type="tel"
                   placeholder="Ingresa tu teléfono"
                   value={form.phone}
-                  onChange={(v) => setForm({ ...form, phone: v })}
-                  hint={digitos ? `${digitos} dígitos.` : undefined}
+                  onChange={(v) => {
+                    setForm({ ...form, phone: v });
+                    setErrors((e) => ({ ...e, phone: undefined }));
+                    setKnown(null);
+                  }}
+                  onBlur={onPhoneBlur}
+                  hint={
+                    known
+                      ? `¡Hola de nuevo, ${known}!`
+                      : digitos
+                        ? `${digitos} dígitos.`
+                        : undefined
+                  }
                   errors={errors.phone}
                 />
                 <Field
@@ -810,6 +860,7 @@ function Field({
   label,
   value,
   onChange,
+  onBlur,
   errors,
   hint,
   placeholder,
@@ -819,6 +870,7 @@ function Field({
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   errors?: string[];
   hint?: string;
   placeholder?: string;
@@ -833,6 +885,7 @@ function Field({
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         className={id === "name" ? "uppercase placeholder:normal-case" : undefined}
       />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { expectedPhoneDigits } from "@/lib/customers/phone";
+import { expectedPhoneDigits, phoneLengthError } from "@/lib/customers/phone";
 import { capitalizeFirst, cn } from "@/lib/utils";
 
 type Slot = { start: string; staffMemberId: string };
@@ -61,7 +61,16 @@ export function NewBookingForm({
    */
   function recognise() {
     const phone = form.phone.trim();
-    if (phone.length < 6) return;
+    if (phone === "") return;
+
+    // Se valida el largo en el acto: decirlo al pulsar "Crear cita" es tarde.
+    const malTelefono = phoneLengthError(phone, dialCode);
+    if (malTelefono) {
+      setErrors((e) => ({ ...e, phone: [malTelefono] }));
+      setKnown(null);
+      return;
+    }
+    setErrors((e) => ({ ...e, phone: undefined }));
     startTransition(async () => {
       const res = await lookupCustomerByPhone(phone);
       if (!res.found) {
@@ -128,6 +137,12 @@ export function NewBookingForm({
     if (!service || !slot) return;
     setErrors({});
     setFormError(null);
+
+    const malTelefono = phoneLengthError(form.phone, dialCode);
+    if (malTelefono) {
+      setErrors({ phone: [malTelefono] });
+      return;
+    }
     startTransition(async () => {
       const res = await createAppointmentAsAdmin({
         serviceId: service.id,
@@ -310,6 +325,7 @@ export function NewBookingForm({
               value={form.phone}
               onChange={(v) => {
                 setForm({ ...form, phone: v });
+                setErrors((e) => ({ ...e, phone: undefined }));
                 setKnown(null);
               }}
               onBlur={recognise}

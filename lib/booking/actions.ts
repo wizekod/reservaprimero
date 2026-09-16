@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { upsertCustomer } from "@/lib/customers/upsert";
-import { phoneLengthError } from "@/lib/customers/phone";
+import { phoneKey, phoneLengthError } from "@/lib/customers/phone";
 import { notifyBookingCreated } from "@/lib/notifications/dispatch";
 import { clientEnv } from "@/lib/env";
 import { getSlots } from "@/lib/availability/queries";
@@ -59,6 +59,50 @@ export async function getBookableStaff(
     .in("id", ids)
     .order("display_name");
   return staff ?? [];
+}
+
+export type PublicCustomerLookup =
+  | { found: false }
+  | { found: true; name: string; email: string | null };
+
+/**
+ * Reconoce a un cliente que ya reservó antes, para no hacerle reescribir sus
+ * datos.
+ *
+ * Ojo con lo que esto expone: quien acierte un número completo averigua si esa
+ * persona es clienta del negocio y cómo se llama. Por eso sólo responde con el
+ * teléfono **completo y bien formado** —no se puede tantear con números a
+ * medias— y está limitado por IP. Devuelve nombre y correo, nada más: ni
+ * historial, ni notas, ni el id del cliente.
+ */
+export async function lookupPublicCustomer(
+  slug: string,
+  phone: string,
+): Promise<PublicCustomerLookup> {
+  if (!rateLimit(`lookup:${await clientIp()}`, 10, 60_000).ok) {
+    return { found: false };
+  }
+
+  const business = await resolveBusiness(slug);
+  if (!business) return { found: false };
+
+  // Un número incompleto no busca: si no, se podría barrer el listado
+  // probando prefijos.
+  if (phoneLengthError(phone, business.phone_country_code)) return { found: false };
+
+  const key = phoneKey(phone, business.phone_country_code);
+  if (!key) return { found: false };
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("customers")
+    .select("name, email")
+    .eq("business_id", business.id)
+    .eq("phone_key", key)
+    .maybeSingle();
+
+  if (!data) return { found: false };
+  return { found: true, name: data.name, email: data.email };
 }
 
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
