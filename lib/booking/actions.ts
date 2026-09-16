@@ -27,7 +27,7 @@ async function resolveBusiness(slug: string) {
   const { data } = await admin
     .from("businesses")
     .select(
-      "id, timezone, status, auto_confirm_bookings, min_booking_notice_hours, max_booking_days, phone_country_code",
+      "id, timezone, status, min_booking_notice_hours, max_booking_days, phone_country_code",
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -153,7 +153,7 @@ export type CreateBookingInput = z.input<typeof bookingSchema>;
 
 export type CreateBookingResult =
   | { ok: false; error: string; fieldErrors?: Record<string, string[] | undefined> }
-  | { ok: true; status: "confirmed" | "pending"; token: string; manageUrl: string };
+  | { ok: true; token: string; manageUrl: string };
 
 export async function createBooking(
   raw: CreateBookingInput,
@@ -183,7 +183,7 @@ export async function createBooking(
 
   const { data: business } = await admin
     .from("businesses")
-    .select("id, timezone, status, auto_confirm_bookings, phone_country_code")
+    .select("id, timezone, status, phone_country_code")
     .eq("slug", b.slug)
     .maybeSingle();
   if (!business || business.status === "suspended") {
@@ -262,8 +262,6 @@ export async function createBooking(
   if (!cust.ok) return { ok: false, error: "No se pudo registrar tus datos." };
   const customerId = cust.customerId;
 
-  const status = business.auto_confirm_bookings ? "confirmed" : "pending";
-
   const { data: appointment, error: apptError } = await admin
     .from("appointments")
     .insert({
@@ -273,7 +271,7 @@ export async function createBooking(
       customer_id: customerId,
       start_at: startISO,
       end_at: endISO,
-      status,
+      status: "confirmed",
       notes: b.notes ?? null,
     })
     .select("id, cancel_token, status")
@@ -290,7 +288,6 @@ export async function createBooking(
 
   return {
     ok: true,
-    status: appointment.status as "confirmed" | "pending",
     token: appointment.cancel_token,
     manageUrl: `${clientEnv.NEXT_PUBLIC_APP_URL}/reservas/${appointment.cancel_token}`,
   };

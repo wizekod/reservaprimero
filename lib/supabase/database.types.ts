@@ -189,7 +189,6 @@ export type Database = {
       businesses: {
         Row: {
           address: string | null
-          auto_confirm_bookings: boolean
           brand_color: string | null
           cancellation_notice_hours: number
           created_at: string
@@ -215,7 +214,6 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          auto_confirm_bookings?: boolean
           brand_color?: string | null
           cancellation_notice_hours?: number
           created_at?: string
@@ -241,7 +239,6 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          auto_confirm_bookings?: boolean
           brand_color?: string | null
           cancellation_notice_hours?: number
           created_at?: string
@@ -706,12 +703,7 @@ export type Database = {
       }
     }
     Enums: {
-      appointment_status:
-        | "pending"
-        | "confirmed"
-        | "cancelled"
-        | "completed"
-        | "no_show"
+      appointment_status: "confirmed" | "cancelled" | "no_show"
       business_status: "active" | "suspended" | "trial"
       notification_channel: "email" | "whatsapp"
       notification_status: "pending" | "sent" | "failed"
@@ -847,13 +839,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      appointment_status: [
-        "pending",
-        "confirmed",
-        "cancelled",
-        "completed",
-        "no_show",
-      ],
+      appointment_status: ["confirmed", "cancelled", "no_show"],
       business_status: ["active", "suspended", "trial"],
       notification_channel: ["email", "whatsapp"],
       notification_status: ["pending", "sent", "failed"],

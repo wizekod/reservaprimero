@@ -99,10 +99,7 @@ export function BookingFlow({
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [known, setKnown] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    status: "confirmed" | "pending";
-    manageUrl: string;
-  } | null>(null);
+  const [result, setResult] = useState<{ manageUrl: string } | null>(null);
 
   const accent = business.brand_color ?? undefined;
   const digitos = expectedPhoneDigits(business.phone_country_code);
@@ -215,7 +212,7 @@ export function BookingFlow({
         turnstileToken: tsToken,
       });
       if (res.ok) {
-        setResult({ status: res.status, manageUrl: res.manageUrl });
+        setResult({ manageUrl: res.manageUrl });
         setStep("done");
       } else {
         setFormError(res.error);
@@ -578,15 +575,9 @@ export function BookingFlow({
                   <Check className="size-8" />
                 </span>
                 <h2 className="text-2xl font-bold tracking-tight">
-                  {result.status === "confirmed"
-                    ? "¡Reserva confirmada!"
-                    : "Reserva recibida"}
+                  ¡Reserva confirmada!
                 </h2>
-                <p className="mt-1 text-muted-foreground">
-                  {result.status === "confirmed"
-                    ? "Te esperamos."
-                    : "El negocio confirmará tu reserva en breve."}
-                </p>
+                <p className="mt-1 text-muted-foreground">Te esperamos.</p>
               </div>
 
               <Panel className="divide-y divide-border">

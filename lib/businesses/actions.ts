@@ -88,10 +88,6 @@ const updateSchema = z.object({
     .int()
     .min(0, "Entre 0 y 720")
     .max(720, "Entre 0 y 720"),
-  auto_confirm_bookings: z.preprocess(
-    (v) => v === "on" || v === "true" || v === true,
-    z.boolean(),
-  ),
   notify_staff_on_booking: z.preprocess(
     (v) => v === "on" || v === "true" || v === true,
     z.boolean(),
@@ -200,7 +196,6 @@ export async function updateBusinessSettings(
     max_booking_days: formData.get("max_booking_days"),
     slot_interval_minutes: formData.get("slot_interval_minutes"),
     cancellation_notice_hours: formData.get("cancellation_notice_hours"),
-    auto_confirm_bookings: formData.get("auto_confirm_bookings"),
     notify_staff_on_booking: formData.get("notify_staff_on_booking"),
     staff_digest_hour: formData.get("staff_digest_hour"),
   });
@@ -240,7 +235,6 @@ export async function updateBusinessSettings(
       max_booking_days: d.max_booking_days,
       slot_interval_minutes: d.slot_interval_minutes,
       cancellation_notice_hours: d.cancellation_notice_hours,
-      auto_confirm_bookings: d.auto_confirm_bookings,
       notify_staff_on_booking: d.notify_staff_on_booking,
       staff_digest_hour: d.staff_digest_hour,
     })

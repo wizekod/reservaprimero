@@ -96,7 +96,7 @@ try {
   const mia = await a(`appointments?id=eq.${citaA.id}`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ status: "completed" }),
+    body: JSON.stringify({ status: "no_show" }),
   });
   ok((await mia.json()).length === 1, "pero sí el de la suya");
 

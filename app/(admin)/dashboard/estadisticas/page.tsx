@@ -9,13 +9,7 @@ import type { AppointmentStatus } from "@/lib/supabase/database.types";
 export const metadata: Metadata = { title: "Estadísticas · ReservaPrimero" };
 
 const dateRe = /^\d{4}-\d{2}-\d{2}$/;
-const STATUSES: AppointmentStatus[] = [
-  "confirmed",
-  "completed",
-  "pending",
-  "cancelled",
-  "no_show",
-];
+const STATUSES: AppointmentStatus[] = ["confirmed", "cancelled", "no_show"];
 
 const money = (n: number) =>
   new Intl.NumberFormat("es", { maximumFractionDigits: 0 }).format(n);
@@ -46,22 +40,30 @@ export default async function EstadisticasPage({
   const byService = new Map<string, { count: number; revenue: number }>();
   let revenue = 0;
 
+  // Sin estado "completada", una cita ya pasada que sigue confirmada es una
+  // cita atendida: ni se canceló ni se marcó como no asistió. Se compara por
+  // fecha local del negocio, no por instante, para no contar como pendiente lo
+  // de esta mañana.
+  const atendida = (a: (typeof appointments)[number]) =>
+    a.status === "confirmed" && todayInTz(tz, new Date(a.startAt)) < today;
+
+  let atendidas = 0;
   for (const a of appointments) {
     byStatus.set(a.status, (byStatus.get(a.status) ?? 0) + 1);
     const s = byService.get(a.serviceName) ?? { count: 0, revenue: 0 };
     s.count += 1;
-    if (a.status === "completed") {
+    if (atendida(a)) {
+      atendidas += 1;
       s.revenue += a.servicePrice;
       revenue += a.servicePrice;
     }
     byService.set(a.serviceName, s);
   }
 
-  const completed = byStatus.get("completed") ?? 0;
   const noShow = byStatus.get("no_show") ?? 0;
   const attendance =
-    completed + noShow > 0
-      ? Math.round((completed / (completed + noShow)) * 100)
+    atendidas + noShow > 0
+      ? Math.round((atendidas / (atendidas + noShow)) * 100)
       : null;
 
   const topServices = [...byService.entries()]
@@ -109,8 +111,12 @@ export default async function EstadisticasPage({
       {/* Tarjetas */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Citas" value={String(appointments.length)} />
-        <Stat label="Facturación estimada" value={money(revenue)} hint="servicios completados" />
-        <Stat label="Completadas" value={String(completed)} />
+        <Stat
+          label="Facturación estimada"
+          value={money(revenue)}
+          hint="citas atendidas"
+        />
+        <Stat label="Atendidas" value={String(atendidas)} />
         <Stat
           label="Tasa de asistencia"
           value={attendance === null ? "—" : `${attendance}%`}

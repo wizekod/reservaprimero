@@ -68,7 +68,7 @@ export default async function DashboardPage() {
   const toISO = wallTimeToInstant(addDays(today, 1), "00:00", tz).toISOString();
   const todays = await listAppointments(fromISO, toISO);
   const active = todays.filter(
-    (a) => a.status === "confirmed" || a.status === "pending",
+    (a) => a.status === "confirmed",
   );
 
   const host = new URL(clientEnv.NEXT_PUBLIC_APP_URL).host;

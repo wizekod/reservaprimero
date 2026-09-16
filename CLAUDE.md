@@ -42,7 +42,7 @@ Multi-tenancy **por path**, no por subdominio: `reservaprimero.com/{slug}`.
 |---|---|---|
 | **Superadmin** | Global | Carlos. Ve/gestiona todos los negocios, planes, suscripciones, métricas de la plataforma. Puede suspender/activar cuentas. |
 | **Admin de negocio** | Su negocio | Dueño/gerente del negocio. CRUD de servicios, staff, horarios, configuración del negocio, ve todas las citas de su negocio, gestiona su suscripción (Billing Portal). |
-| **Staff** | Sus propias citas | Miembro del equipo. Ve y gestiona únicamente las citas asignadas a él/ella, puede marcar completado/no-show. |
+| **Staff** | Sus propias citas | Miembro del equipo. Ve y gestiona únicamente las citas asignadas a él/ella, puede marcar no-show/cancelada. |
 | **Cliente final (público)** | Sin cuenta | Accede al link público, agenda sin login. Recibe confirmación y recordatorios. Puede cancelar/reagendar vía link con token (sin password). |
 
 Tabla `profiles` (extiende `auth.users` de Supabase) con columna `role` (`superadmin` | `business_admin` | `staff`) + relación a `business_id` cuando aplique (un usuario admin/staff pertenece a un negocio; superadmin no pertenece a ninguno).
@@ -61,7 +61,7 @@ Tablas principales (nombres sugeridos, ajustables):
 - **`availability_exceptions`** — id, staff_member_id, date, is_closed, start_time, end_time — feriados, días libres, horario especial
 - **`customers`** — id, business_id, name, phone, **phone_key**, email, created_at — CRM ligero por negocio
 - **`customer_notes`** — id, business_id, customer_id, appointment_id, author_id, body, pinned, created_at — historia clínica. Tabla aparte y no columna de `customers` porque el staff lee la ficha del cliente y la RLS filtra filas, no columnas
-- **`appointments`** — id, business_id, service_id, staff_member_id, customer_id, start_at (timestamptz), end_at, status (`pending`/`confirmed`/`cancelled`/`completed`/`no_show`), cancel_token, notes, created_at
+- **`appointments`** — id, business_id, service_id, staff_member_id, customer_id, start_at (timestamptz), end_at, status (`confirmed`/`cancelled`/`no_show`), cancel_token, notes, created_at
 - **`notifications_log`** — id, appointment_id, channel (`email`/`whatsapp`), type (`confirmation`/`reminder`/`cancellation`), **recipient** (`customer`/`business`/`staff`), status, sent_at
 - **`daily_digest_log`** — id, business_id, staff_member_id (null = dueño), local_date, sent_at — idempotencia del resumen diario, que no cabe en `notifications_log` porque agrupa N citas
 
@@ -91,7 +91,7 @@ Tablas principales (nombres sugeridos, ajustables):
 
 ### Flujo staff
 - Ve solo sus propias citas (día/semana).
-- Marca cita como completada / no-show / cancelada.
+- Marca cita como no-show o cancelada.
 
 ### Flujo superadmin
 - Listado de todos los negocios con estado (activo/suspendido/trial) y plan.
@@ -241,7 +241,7 @@ CRON_SECRET=
 - [X] Página pública de reserva `/[slug]` — flujo completo + `createBooking` server-side (revalidación, find-or-create customer, cancel_token, `auto_confirm_bookings`, rate limit, Turnstile, notificaciones, límite plan Free).
 - [X] Cancelación/reagendado vía token sin login — `/reservas/[token]`: ver / cancelar / reagendar respetando `cancellation_notice_hours`; el `cancel_token` rota al reagendar.
 - [X] Dashboard admin de negocio — sidebar responsivo (cajón en móvil) con: Inicio · Nueva Reserva · Calendario (rejilla horaria día/semana + mes) · Estadísticas · Servicios · Staff · Bloquear horario · Mi suscripción · Configuración. Sin MercadoPago/Extras/Transferencias por decisión de Carlos.
-- [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar completada/no-show/cancelada/confirmada.
+- [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar no asistió o cancelada.
 - [X] Dashboard superadmin (negocios, activar/suspender, planes) — `/superadmin` (métricas + tabla de negocios + suspender/reactivar) y `/superadmin/planes` (editar planes). MRR vía Stripe queda para el bloque de Stripe.
 - [~] Integración email (Resend) — confirmación + recordatorios — código completo en modo protegido (no-op sin `RESEND_API_KEY`); enganchado a reserva/confirmación/cancelación/reagendado/recordatorio. Falta pegar credenciales.
 - [~] Integración WhatsApp (Twilio) — confirmación + recordatorios — código completo en modo protegido; solo se envía si el plan incluye la feature. Falta credenciales + plantilla aprobada.

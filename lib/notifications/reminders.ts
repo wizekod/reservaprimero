@@ -26,7 +26,7 @@ export async function runReminders(now: Date = new Date()) {
     const { data: appts } = await admin
       .from("appointments")
       .select("id")
-      .in("status", ["confirmed", "pending"])
+      .eq("status", "confirmed")
       .gte("start_at", from.toISOString())
       .lt("start_at", to.toISOString());
 

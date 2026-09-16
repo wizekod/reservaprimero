@@ -92,7 +92,7 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
     .from("appointments")
     .select("id, staff_member_id, start_at, end_at")
     .in("staff_member_id", staffIds)
-    .in("status", ["pending", "confirmed"])
+    .eq("status", "confirmed")
     .gte("start_at", busyFrom.toISOString())
     .lt("start_at", busyTo.toISOString());
   if (p.excludeAppointmentId) {

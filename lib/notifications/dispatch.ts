@@ -308,7 +308,7 @@ export async function notifyReminder(
 ): Promise<void> {
   const ctx = await loadCtx(appointmentId);
   if (!ctx) return;
-  if (ctx.status !== "confirmed" && ctx.status !== "pending") return;
+  if (ctx.status !== "confirmed") return;
   await deliver(ctx, "reminder", {
     offset: offsetMinutes,
     subject: `Recordatorio: tu cita en ${ctx.businessName}`,

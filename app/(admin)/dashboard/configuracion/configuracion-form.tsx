@@ -253,17 +253,6 @@ export function ConfiguracionForm({
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="auto_confirm_bookings"
-                defaultChecked={business.auto_confirm_bookings}
-                className="size-4"
-              />
-              Confirmar reservas automáticamente (si lo desactivas, quedan
-              pendientes de tu aprobación)
-            </label>
-
             <div className="border-t border-border pt-4">
               <h3 className="text-sm font-semibold">Avisos al equipo</h3>
               <p className="mt-0.5 text-sm text-muted-foreground">

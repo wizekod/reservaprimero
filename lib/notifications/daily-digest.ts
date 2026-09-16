@@ -75,7 +75,7 @@ export async function runDailyDigests(
          customers ( name, phone )`,
       )
       .eq("business_id", b.id)
-      .in("status", ["confirmed", "pending"])
+      .eq("status", "confirmed")
       .gte("start_at", new Date(desdeISO.getTime() - 36 * 3600_000).toISOString())
       .lt("start_at", new Date(desdeISO.getTime() + 60 * 3600_000).toISOString())
       .order("start_at");
@@ -102,7 +102,7 @@ export async function runDailyDigests(
       const servicio = pick(c.services);
       return `${hora} · ${servicio?.name ?? "—"} · ${cliente?.name ?? "—"}${
         cliente?.phone ? ` (${cliente.phone})` : ""
-      }${c.status === "pending" ? " [sin confirmar]" : ""}`;
+      }`;
     };
 
     const fechaLarga = new Date(`${hoy}T12:00:00Z`).toLocaleDateString("es", {

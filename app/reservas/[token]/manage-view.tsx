@@ -14,10 +14,8 @@ import { Label } from "@/components/ui/label";
 import { capitalizeFirst } from "@/lib/utils";
 
 const STATUS_TEXT: Record<ManagedAppointment["status"], string> = {
-  pending: "Pendiente de confirmación",
   confirmed: "Confirmada",
   cancelled: "Cancelada",
-  completed: "Completada",
   no_show: "No asististe",
 };
 

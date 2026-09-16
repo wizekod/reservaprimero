@@ -54,7 +54,7 @@ export async function getAppointmentByToken(
 
   const noticeMs = business.cancellation_notice_hours * 3_600_000;
   const canModify =
-    (data.status === "pending" || data.status === "confirmed") &&
+    data.status === "confirmed" &&
     Date.now() < new Date(data.start_at).getTime() - noticeMs;
 
   return {
