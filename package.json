@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:lan": "node --env-file=.env.local scripts/dev-lan.mjs"
   },
   "engines": {
     "node": ">=20.9.0"
