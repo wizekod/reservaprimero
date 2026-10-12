@@ -9,7 +9,7 @@ una página pública de reservas en `reservaprimero.com/{slug}`.
 ## Stack
 
 Next.js (App Router) · TypeScript · Tailwind + shadcn/ui · Supabase (Postgres +
-Auth + RLS) · Stripe Subscriptions · Resend · Twilio WhatsApp · Vercel.
+Auth + RLS) · Stripe Subscriptions · Resend · WhatsApp Cloud API (Meta) · Vercel.
 
 ## Desarrollo local
 

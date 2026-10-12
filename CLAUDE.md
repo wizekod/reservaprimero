@@ -19,7 +19,7 @@ Carlos (dueño del SaaS) cobra una **suscripción mensual a cada negocio** vía 
 | UI | shadcn/ui + Tailwind |
 | Pagos (SaaS → negocio) | Stripe (Subscriptions + Billing Portal, **no** Stripe Connect) |
 | Email transaccional | Resend (o Postmark como alternativa) |
-| WhatsApp | Twilio WhatsApp Business API (recomendado) — alternativa: Meta Cloud API directa |
+| WhatsApp | Meta WhatsApp Cloud API directa (sin intermediario; antes Twilio) |
 | Hosting | Vercel |
 | Repo | GitHub |
 | Dominio/DNS | Cloudflare → `reservaprimero.com` apuntando a Vercel |
@@ -116,7 +116,7 @@ Esta es la lista completa de lo que hace ReservaSimple hoy. Tú decides qué mov
 | Dashboard staff: solo sus citas | |
 | Dashboard superadmin: negocios, planes, activar/suspender | |
 | Notificaciones por **email** (confirmación + recordatorios) | Resend |
-| Notificaciones por **WhatsApp** (confirmación + hasta 3 recordatorios) | Twilio WhatsApp API |
+| Notificaciones por **WhatsApp** (confirmación + hasta 3 recordatorios) | Meta WhatsApp Cloud API |
 | Cancelación/reagendado por el cliente vía link con token | sin login |
 | Suscripciones SaaS con Stripe (plan Free limitado + Premium ilimitado) | Checkout + Billing Portal + webhooks |
 | Protección anti-spam en el formulario de reserva | Cloudflare Turnstile + rate limiting |
@@ -145,7 +145,7 @@ Esta es la lista completa de lo que hace ReservaSimple hoy. Tú decides qué mov
 ## 8. Sistema de notificaciones (Email + WhatsApp)
 
 - **Email**: Resend. Templates para confirmación, recordatorio y cancelación.
-- **WhatsApp**: Twilio WhatsApp Business API. Requiere registrar un número de WhatsApp Business y una plantilla de mensaje aprobada por Meta para mensajes fuera de la ventana de 24h (las confirmaciones/recordatorios normalmente cuentan como "template messages").
+- **WhatsApp**: Cloud API de Meta, directa y sin intermediario (se descartó Twilio por su comisión por mensaje). Un único número de ReservaPrimero para todos los negocios; un número por negocio exigiría ser Tech Provider + Embedded Signup (Fase 3). Los mensajes que inicia el negocio sólo pueden ser plantillas aprobadas (`cita_confirmada`, `cita_reagendada`, `cita_recordatorio`, `cita_cancelada`, categoría Utility; texto en DEPLOY.md). El destinatario sale de `customers.phone_key` (E.164).
 - **Recordatorios programados**: Vercel Cron ejecuta un job periódico (ej. cada 15-30 min) que revisa citas próximas y dispara recordatorios según reglas configurables (ej. 24h antes, 2h antes).
 - Registrar cada envío en `notifications_log` para trazabilidad y para evitar duplicados/reintentos.
 
@@ -212,9 +212,9 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 
 RESEND_API_KEY=
 
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_WHATSAPP_NUMBER=
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_TEMPLATE_LANG=es
 
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
@@ -244,11 +244,11 @@ CRON_SECRET=
 - [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar no asistió o cancelada.
 - [X] Dashboard superadmin (negocios, activar/suspender, planes) — `/superadmin` (métricas + tabla de negocios + suspender/reactivar) y `/superadmin/planes` (editar planes). MRR vía Stripe queda para el bloque de Stripe.
 - [~] Integración email (Resend) — confirmación + recordatorios — código completo en modo protegido (no-op sin `RESEND_API_KEY`); enganchado a reserva/confirmación/cancelación/reagendado/recordatorio. Falta pegar credenciales.
-- [~] Integración WhatsApp (Twilio) — confirmación + recordatorios — código completo en modo protegido; solo se envía si el plan incluye la feature. Falta credenciales + plantilla aprobada.
+- [~] Integración WhatsApp (Meta Cloud API) — confirmación + reagendado + recordatorios + cancelación con plantillas — código completo en modo protegido; solo se envía si el plan incluye la feature. Falta alta en Meta, token permanente y aprobar las 4 plantillas (DEPLOY.md §6).
 - [X] Vercel Cron para recordatorios programados — `app/api/cron/reminders` + `vercel.json` (cada 30 min, 24h y 2h antes), protegido por `CRON_SECRET`.
 - [~] Stripe Subscriptions (Checkout, Billing Portal, webhook, enforcement de límite Free) — código completo en modo protegido: checkout/portal/webhook + límite del plan Free ACTIVO. Falta pegar claves de Stripe y el price_id de Premium (en /superadmin/planes).
 - [~] Anti-spam (Turnstile + rate limiting) — rate limiting en memoria activo; Turnstile en modo protegido (widget + verify, no-op sin claves). Falta pegar claves de Cloudflare.
-- [~] QA end-to-end + deploy a producción — suite E2E (14 scripts, ~218 checks) en verde contra Supabase real; typecheck/lint/build ok. Deploy y activación de servicios: ver DEPLOY.md (acciones de Carlos en Vercel/Stripe/Resend/Twilio/Cloudflare).
+- [~] QA end-to-end + deploy a producción — suite E2E (14 scripts, ~218 checks) en verde contra Supabase real; typecheck/lint/build ok. Deploy y activación de servicios: ver DEPLOY.md (acciones de Carlos en Vercel/Stripe/Resend/Meta/Cloudflare).
 
 ### Fase 2
 - [ ] Google Calendar sync (OAuth por staff)

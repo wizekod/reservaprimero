@@ -41,7 +41,8 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
 | `NEXT_PUBLIC_APP_URL` | siempre | `https://reservoprimero.com` |
 | `CRON_SECRET` | recordatorios | genera uno aleatorio (`openssl rand -hex 32`) |
 | `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | email | Resend → API Keys + dominio verificado |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_NUMBER` | WhatsApp | Twilio Console (formato `whatsapp:+1...`) |
+| `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp | Meta Business Manager (ver §6) |
+| `WHATSAPP_TEMPLATE_LANG` | WhatsApp (opcional) | idioma de las plantillas, por defecto `es` |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` | anti-bot | Cloudflare → Turnstile |
 | `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | pagos | Stripe → Developers → API keys |
 | `STRIPE_WEBHOOK_SECRET` | pagos | Stripe → Webhooks (ver §4) |
@@ -81,12 +82,87 @@ captura es de 35 min), pero el resumen diario sigue funcionando si la hora del
 cron coincide con la hora configurada. Vercel envía
 `Authorization: Bearer $CRON_SECRET` automáticamente.
 
-## 6. Checklist de QA manual antes de anunciar
+## 6. WhatsApp (Cloud API de Meta)
+
+Sale todo desde **un único número de ReservaPrimero**; el nombre del negocio va
+dentro del mensaje. Sólo se envía a clientes de negocios cuyo plan tenga
+`features.whatsapp = true`.
+
+1. En [business.facebook.com](https://business.facebook.com) verifica el
+   negocio y crea una app de tipo *Business* con el producto **WhatsApp**.
+2. Da de alta el número (no puede estar usándose en la app de WhatsApp). En
+   *WhatsApp → API Setup* copia el **Phone number ID** →
+   `WHATSAPP_PHONE_NUMBER_ID`.
+3. En *Business Settings → System users* crea un usuario de sistema (Admin),
+   asígnale la app y el WhatsApp Business Account, y genera un token
+   **permanente** con los permisos `whatsapp_business_messaging` y
+   `whatsapp_business_management` → `WHATSAPP_ACCESS_TOKEN`. El token temporal
+   de *API Setup* caduca en 24 h; no sirve para producción.
+4. Añade un método de pago en el WhatsApp Business Account: Meta cobra por
+   mensaje de plantilla entregado.
+5. En *WhatsApp Manager → Message templates* crea estas cuatro plantillas,
+   categoría **Utility**, idioma **Spanish** (`es`; si eliges otra variante,
+   p. ej. `es_MX`, pon ese código en `WHATSAPP_TEMPLATE_LANG`). El nombre y el
+   orden de las variables tienen que coincidir con
+   `lib/notifications/whatsapp.ts`; el texto puede ajustarse.
+
+**`cita_confirmada`**
+```
+Hola {{1}}, tu cita en {{2}} está confirmada.
+
+Servicio: {{3}}
+Fecha: {{4}}
+Con: {{5}}
+
+Para cancelar o reagendar: {{6}}
+
+¡Te esperamos!
+```
+
+**`cita_reagendada`**
+```
+Hola {{1}}, tu cita en {{2}} fue reagendada.
+
+Servicio: {{3}}
+Nueva fecha: {{4}}
+Con: {{5}}
+
+Para cancelar o reagendar: {{6}}
+
+¡Te esperamos!
+```
+
+**`cita_recordatorio`**
+```
+Hola {{1}}, te recordamos tu cita en {{2}}.
+
+Servicio: {{3}}
+Fecha: {{4}}
+Con: {{5}}
+
+Si necesitas cancelar o reagendar: {{6}}
+
+¡Nos vemos pronto!
+```
+
+**`cita_cancelada`**
+```
+Hola {{1}}, tu cita en {{2}} de {{3}} del {{4}} fue cancelada.
+
+Puedes volver a reservar cuando quieras.
+```
+
+Meta revisa cada plantilla (de minutos a un día). Mientras no esté aprobada,
+los envíos fallan y quedan en `notifications_log` con `status = failed` y el
+error de Meta.
+
+## 7. Checklist de QA manual antes de anunciar
 
 - [ ] Registro de negocio → onboarding → panel.
 - [ ] Crear servicio, staff (con correo → aceptar invitación → panel `/staff`), horario.
 - [ ] Reserva pública en `/{slug}` (con y sin "cualquiera disponible").
 - [ ] Cancelar y reagendar desde el enlace `/reservas/{token}`.
 - [ ] Agenda admin: confirmar / completar / no-show / cancelar.
+- [ ] (con WhatsApp) reservar con tu propio número en un negocio con plan Premium → llega `cita_confirmada`.
 - [ ] (con Stripe) upgrade a Premium → webhook actualiza el plan → límite Free deja de aplicar.
 - [ ] Superadmin: suspender un negocio → su página pública deja de cargar.

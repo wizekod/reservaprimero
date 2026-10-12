@@ -7,7 +7,11 @@ import type {
   Enums,
 } from "@/lib/supabase/database.types";
 import { sendEmail, type SendResult } from "@/lib/notifications/email";
-import { sendWhatsApp, toWhatsAppAddress } from "@/lib/notifications/whatsapp";
+import {
+  sendWhatsApp,
+  toWhatsAppAddress,
+  type WhatsAppTemplate,
+} from "@/lib/notifications/whatsapp";
 
 type NotificationType = Enums<"notification_type">; // confirmation | reminder | cancellation
 type Recipient = "customer" | "business" | "staff";
@@ -25,6 +29,7 @@ type Ctx = {
   customerName: string;
   customerEmail: string | null;
   customerPhone: string | null;
+  customerPhoneKey: string | null;
   ownerEmail: string | null;
   staffEmail: string | null;
   notifyStaff: boolean;
@@ -41,7 +46,7 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
       `id, status, start_at, cancel_token, business_id,
        services ( name ),
        staff_members ( display_name, invited_email, profile_id ),
-       customers ( name, email, phone ),
+       customers ( name, email, phone, phone_key ),
        businesses ( name, timezone, plan_id, notify_staff_on_booking )`,
     )
     .eq("id", appointmentId)
@@ -100,6 +105,7 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     customerName: customer.name,
     customerEmail: customer.email,
     customerPhone: customer.phone,
+    customerPhoneKey: customer.phone_key,
     ownerEmail,
     staffEmail,
     notifyStaff: business.notify_staff_on_booking,
@@ -119,6 +125,19 @@ function whenText(ctx: Ctx): string {
 
 const manageUrl = (ctx: Ctx) =>
   `${clientEnv.NEXT_PUBLIC_APP_URL}/reservas/${ctx.cancelToken}`;
+
+// Variables de las plantillas de WhatsApp, en el orden de WHATSAPP_TEMPLATES.
+const waFull = (ctx: Ctx, template: WhatsAppTemplate) => ({
+  template,
+  params: [
+    ctx.customerName,
+    ctx.businessName,
+    ctx.serviceName,
+    whenText(ctx),
+    ctx.staffName,
+    manageUrl(ctx),
+  ],
+});
 
 async function alreadySent(
   appointmentId: string,
@@ -170,6 +189,7 @@ async function deliver(
     offset?: number | null;
     subject: string;
     customerText: string;
+    whatsapp: { template: WhatsAppTemplate; params: string[] };
     ownerText?: string;
     staffText?: string;
     skipDedupe?: boolean;
@@ -190,10 +210,10 @@ async function deliver(
   }
 
   // Cliente — WhatsApp (solo si el plan lo incluye)
-  const wa = toWhatsAppAddress(ctx.customerPhone);
+  const wa = toWhatsAppAddress(ctx.customerPhoneKey);
   if (wa && ctx.whatsappEnabled) {
     if (opts.skipDedupe || !(await alreadySent(ctx.id, "whatsapp", type, "customer", offset))) {
-      const r = await sendWhatsApp({ to: wa, body: opts.customerText });
+      const r = await sendWhatsApp({ to: wa, ...opts.whatsapp });
       await logSend(ctx.id, "whatsapp", type, "customer", offset, r);
     }
   }
@@ -248,6 +268,7 @@ export async function notifyBookingCreated(appointmentId: string): Promise<void>
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} el ${whenText(ctx)} ` +
       `con ${ctx.staffName} ${confirmed ? "está confirmada" : "quedó pendiente de confirmación"}.\n\n` +
       `Para cancelar o reagendar: ${manageUrl(ctx)}`,
+    whatsapp: waFull(ctx, "cita_confirmada"),
     ownerText:
       `Nueva reserva: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.staffName}\n` +
       `Cliente: ${ctx.customerName}${ctx.customerPhone ? ` (${ctx.customerPhone})` : ""}`,
@@ -267,6 +288,7 @@ export async function notifyBookingConfirmed(appointmentId: string): Promise<voi
     customerText:
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} el ${whenText(ctx)} ` +
       `con ${ctx.staffName} ha sido confirmada.\n\nGestionar: ${manageUrl(ctx)}`,
+    whatsapp: waFull(ctx, "cita_confirmada"),
   });
 }
 
@@ -278,6 +300,10 @@ export async function notifyBookingCancelled(appointmentId: string): Promise<voi
     customerText:
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} del ${whenText(ctx)} ` +
       `ha sido cancelada.`,
+    whatsapp: {
+      template: "cita_cancelada",
+      params: [ctx.customerName, ctx.businessName, ctx.serviceName, whenText(ctx)],
+    },
     ownerText: `Reserva cancelada: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.customerName}`,
     staffText:
       `${ctx.staffName}, se canceló tu cita de ${ctx.serviceName} del ${whenText(ctx)} ` +
@@ -295,6 +321,7 @@ export async function notifyBookingRescheduled(appointmentId: string): Promise<v
     customerText:
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} quedó para el ${whenText(ctx)} ` +
       `con ${ctx.staffName}.\n\nGestionar: ${manageUrl(ctx)}`,
+    whatsapp: waFull(ctx, "cita_reagendada"),
     ownerText: `Reserva reagendada: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.customerName}`,
     staffText:
       `${ctx.staffName}, tu cita de ${ctx.serviceName} con ${ctx.customerName} ` +
@@ -315,5 +342,6 @@ export async function notifyReminder(
     customerText:
       `Hola ${ctx.customerName}, te recordamos tu cita de ${ctx.serviceName} el ${whenText(ctx)} ` +
       `con ${ctx.staffName}.\n\nCancelar o reagendar: ${manageUrl(ctx)}`,
+    whatsapp: waFull(ctx, "cita_recordatorio"),
   });
 }
