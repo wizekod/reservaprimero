@@ -103,6 +103,39 @@ export async function signUp(
   redirect("/onboarding");
 }
 
+const resetSchema = z.object({ email: emailField });
+
+/**
+ * Envía el correo para restablecer la contraseña. El enlace inicia sesión y
+ * lleva a /auth/definir-clave.
+ *
+ * La respuesta es la misma exista o no la cuenta: si no, el formulario
+ * serviría para averiguar qué correos están registrados.
+ */
+export async function requestPasswordReset(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = resetSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${clientEnv.NEXT_PUBLIC_APP_URL}/auth/callback?next=/auth/definir-clave`,
+  });
+  if (error?.status === 429) {
+    return { error: "Demasiados intentos. Espera unos minutos y vuelve a probar." };
+  }
+  if (error) console.error("requestPasswordReset:", error.message);
+
+  return {
+    message:
+      "Si hay una cuenta con ese correo, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.",
+  };
+}
+
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();

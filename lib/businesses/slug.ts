@@ -28,6 +28,7 @@ export const RESERVED_SLUGS = new Set<string>([
   // añadidas tras CLAUDE.md §3:
   "onboarding",
   "reservas",
+  "recuperar",
   "_next",
   "favicon.ico",
 ]);

@@ -233,7 +233,7 @@ CRON_SECRET=
 - [~] Configurar Vercel + GitHub + variables de entorno — `.env.example` completo; falta crear repo GitHub, conectar a Vercel y pegar env vars (acciones de Carlos)
 
 ### Fase 1 — MVP
-- [X] Auth (Supabase Auth) + tabla `profiles` + middleware de roles — `proxy.ts` (Next 16), DAL `requireRole`, login/registro/logout, paneles `/dashboard` `/staff` `/superadmin`. Rutas: prefijo por rol.
+- [X] Auth (Supabase Auth) + tabla `profiles` + middleware de roles — `proxy.ts` (Next 16), DAL `requireRole`, login/registro/logout/recuperar contraseña (`/recuperar` → enlace → `/auth/definir-clave`), paneles `/dashboard` `/staff` `/superadmin`. Rutas: prefijo por rol.
 - [X] CRUD negocios (alta de negocio + slug único) — `/onboarding` (crea `businesses` + enlaza `profiles.business_id` con service_role), `/dashboard/configuracion` (editar datos vía RLS), validación de slug en vivo. Nota: nuevos negocios entran como `trial` (14 días, plan Free) — ajustable en `lib/businesses/constants.ts`.
 - [X] CRUD servicios por negocio — `/dashboard/servicios` (+ `/nuevo`, `/[id]`): listar/crear/editar/activar-desactivar/eliminar vía RLS `services_admin_write`.
 - [X] CRUD staff + horarios (`availability_rules`, `availability_exceptions`) — `/dashboard/staff` (CRUD + `staff_services` + invitación por email → rol `staff` + panel) y `/dashboard/staff/[id]/horario` (franjas semanales + excepciones).

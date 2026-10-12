@@ -8,7 +8,7 @@ import { updateSession } from "@/lib/supabase/middleware";
  * La autorización por rol vive en el `layout.tsx` de cada área vía el DAL.
  */
 
-const AUTH_PAGES = new Set(["/login", "/registro"]);
+const AUTH_PAGES = new Set(["/login", "/registro", "/recuperar"]);
 
 export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);
@@ -22,7 +22,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Con sesión en login/registro → fuera. El layout de cada área lo llevará
+  // Con sesión en login/registro/recuperar → fuera. El layout de cada área lo llevará
   // a su home real según el rol.
   if (user && isAuthPage) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -39,5 +39,6 @@ export const config = {
     "/onboarding/:path*",
     "/login",
     "/registro",
+    "/recuperar",
   ],
 };

@@ -53,7 +53,15 @@ export function LoginForm({ next }: { next?: string }) {
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Contraseña</Label>
+              <Link
+                href="/recuperar"
+                className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+              >
+                ¿La olvidaste?
+              </Link>
+            </div>
             <Input
               id="password"
               name="password"
