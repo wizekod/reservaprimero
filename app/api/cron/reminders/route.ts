@@ -8,13 +8,14 @@ export const maxDuration = 60;
  * Tareas programadas: recordatorios de cita al cliente y resumen diario de
  * agenda al equipo.
  *
- * Van en la misma ruta y no en dos crons distintos porque el plan Hobby de
- * Vercel limita el número de crons, y la cadencia de 30 min ya sirve para
- * ambas: los recordatorios abren una ventana de 35 min y el resumen sólo
- * comprueba si la hora local del negocio cruzó la hora configurada.
+ * Las dispara cada 30 min pg_cron desde Supabase (migración
+ * `reminders_pg_cron`), no Vercel Cron: el plan Hobby sólo admite crons
+ * diarios. La misma cadencia sirve para ambas: los recordatorios abren una
+ * ventana de 35 min y el resumen sólo comprueba si la hora local del negocio
+ * cruzó la hora configurada.
  *
- * Vercel envía `Authorization: Bearer $CRON_SECRET`. En local sin
- * `CRON_SECRET` se permite; en producción sin secreto configurado, se rechaza.
+ * Se exige `Authorization: Bearer $CRON_SECRET`. En local sin `CRON_SECRET`
+ * se permite; en producción sin secreto configurado, se rechaza.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;

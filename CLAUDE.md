@@ -23,7 +23,7 @@ Carlos (dueño del SaaS) cobra una **suscripción mensual a cada negocio** vía 
 | Hosting | Vercel |
 | Repo | GitHub |
 | Dominio/DNS | Cloudflare → `reservaprimero.com` apuntando a Vercel |
-| Jobs programados | Vercel Cron (recordatorios) |
+| Jobs programados | pg_cron + pg_net en Supabase → `/api/cron/reminders` (Vercel Hobby sólo admite crons diarios) |
 | Anti-spam | Cloudflare Turnstile + rate limiting en API routes |
 
 ## 3. Arquitectura multi-tenant
@@ -146,7 +146,7 @@ Esta es la lista completa de lo que hace ReservaSimple hoy. Tú decides qué mov
 
 - **Email**: Resend. Templates para confirmación, recordatorio y cancelación.
 - **WhatsApp**: Cloud API de Meta, directa y sin intermediario (se descartó Twilio por su comisión por mensaje). Un único número de ReservaPrimero para todos los negocios; un número por negocio exigiría ser Tech Provider + Embedded Signup (Fase 3). Los mensajes que inicia el negocio sólo pueden ser plantillas aprobadas (`cita_confirmada`, `cita_reagendada`, `cita_recordatorio`, `cita_cancelada`, categoría Utility; texto en DEPLOY.md). El destinatario sale de `customers.phone_key` (E.164).
-- **Recordatorios programados**: Vercel Cron ejecuta un job periódico (ej. cada 15-30 min) que revisa citas próximas y dispara recordatorios según reglas configurables (ej. 24h antes, 2h antes).
+- **Recordatorios programados**: pg_cron en Supabase llama cada 30 min a `/api/cron/reminders` (no Vercel Cron: en Hobby sólo hay crons diarios y uno más frecuente bloquea el despliegue) que revisa citas próximas y dispara recordatorios según reglas configurables (ej. 24h antes, 2h antes).
 - Registrar cada envío en `notifications_log` para trazabilidad y para evitar duplicados/reintentos.
 
 ## 9. Suscripciones y cobros (Stripe — SaaS al negocio)
@@ -245,7 +245,7 @@ CRON_SECRET=
 - [X] Dashboard superadmin (negocios, activar/suspender, planes) — `/superadmin` (métricas + tabla de negocios + suspender/reactivar) y `/superadmin/planes` (editar planes). MRR vía Stripe queda para el bloque de Stripe.
 - [~] Integración email (Resend) — confirmación + recordatorios — código completo en modo protegido (no-op sin `RESEND_API_KEY`); enganchado a reserva/confirmación/cancelación/reagendado/recordatorio. Falta pegar credenciales.
 - [~] Integración WhatsApp (Meta Cloud API) — confirmación + reagendado + recordatorios + cancelación con plantillas — código completo en modo protegido; solo se envía si el plan incluye la feature. Falta alta en Meta, token permanente y aprobar las 4 plantillas (DEPLOY.md §6).
-- [X] Vercel Cron para recordatorios programados — `app/api/cron/reminders` + `vercel.json` (cada 30 min, 24h y 2h antes), protegido por `CRON_SECRET`.
+- [~] Recordatorios programados — `app/api/cron/reminders` (24h y 2h antes + resumen diario), protegido por `CRON_SECRET`. Lo dispara pg_cron cada 30 min (migración `reminders_pg_cron`); falta aplicar la migración y cargar `app_url` + `cron_secret` en Vault (DEPLOY.md §5).
 - [~] Stripe Subscriptions (Checkout, Billing Portal, webhook, enforcement de límite Free) — código completo en modo protegido: checkout/portal/webhook + límite del plan Free ACTIVO. Falta pegar claves de Stripe y el price_id de Premium (en /superadmin/planes).
 - [~] Anti-spam (Turnstile + rate limiting) — rate limiting en memoria activo; Turnstile en modo protegido (widget + verify, no-op sin claves). Falta pegar claves de Cloudflare.
 - [~] QA end-to-end + deploy a producción — suite E2E (14 scripts, ~218 checks) en verde contra Supabase real; typecheck/lint/build ok. Deploy y activación de servicios: ver DEPLOY.md (acciones de Carlos en Vercel/Stripe/Resend/Meta/Cloudflare).

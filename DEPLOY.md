@@ -71,18 +71,46 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
    `customer.subscription.deleted`. Copia el *Signing secret* →
    `STRIPE_WEBHOOK_SECRET`.
 
-## 5. Vercel Cron
+## 5. Tareas programadas (pg_cron en Supabase)
 
-`vercel.json` ya define el cron (`/api/cron/reminders`, cada 30 min). Esa ruta
-hace dos cosas: los recordatorios de cita al cliente (24 h y 2 h antes) y el
-resumen diario de agenda al equipo, que sale a la hora local configurada por
-cada negocio en Configuración → Avisos al equipo.
+`/api/cron/reminders` hace dos cosas: los recordatorios de cita al cliente
+(24 h y 2 h antes) y el resumen diario de agenda al equipo, que sale a la hora
+local configurada por cada negocio en Configuración → Avisos al equipo.
 
-En Hobby el mínimo es diario; para cada 30 min se necesita plan Pro. **Con un
-cron diario los recordatorios de 2 h dejan de ser fiables** (la ventana de
-captura es de 35 min), pero el resumen diario sigue funcionando si la hora del
-cron coincide con la hora configurada. Vercel envía
-`Authorization: Bearer $CRON_SECRET` automáticamente.
+La llama cada 30 min **pg_cron desde Supabase**, no Vercel Cron: el plan Hobby
+sólo admite crons diarios y, si `vercel.json` pide uno más frecuente, Vercel
+rechaza el despliegue entero sin llegar a compilar. Con un cron diario los
+recordatorios de 2 h no serían fiables (la ventana de captura es de 35 min).
+
+La migración `20261012120000_reminders_pg_cron.sql` crea el job. Falta darle,
+una vez, la URL y el secreto en **Supabase → SQL Editor** (quedan cifrados en
+Vault, no en el repo). `<CRON_SECRET>` es el mismo valor que en Vercel:
+
+```sql
+select vault.create_secret('https://reservaprimero.com', 'app_url');
+select vault.create_secret('<CRON_SECRET>', 'cron_secret');
+```
+
+Comprobación, pasada la siguiente media hora en punto:
+
+```sql
+-- el job corrió
+select status, return_message, start_time
+from cron.job_run_details order by start_time desc limit 3;
+-- y la app respondió 200 con {"ok":true,...}
+select status_code, content, created
+from net._http_response order by created desc limit 3;
+```
+
+Un 401 significa que `cron_secret` no coincide con `CRON_SECRET` de Vercel.
+Para cambiarlo: `select vault.update_secret(id, '<nuevo>') from vault.secrets
+where name = 'cron_secret';`
+
+Si algún día se pasa a Vercel Pro, puede volver a `vercel.json`
+(`"crons": [{ "path": "/api/cron/reminders", "schedule": "0,30 * * * *" }]`)
+y quitar el job con `select cron.unschedule('reservaprimero-reminders');`.
+Las dos cosas a la vez no rompen nada (los envíos son idempotentes), pero
+duplican trabajo.
 
 ## 6. WhatsApp (Cloud API de Meta)
 
