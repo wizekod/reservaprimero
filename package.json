@@ -11,7 +11,7 @@
     "dev:lan": "node --env-file=.env.local scripts/dev-lan.mjs"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": "22.x"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
