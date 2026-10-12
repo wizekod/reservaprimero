@@ -1,4 +1,4 @@
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, UserRound } from "lucide-react";
 
 import { requireRole } from "@/lib/auth/dal";
 import { ROLE_LABEL } from "@/lib/auth/roles";
@@ -6,6 +6,7 @@ import { PanelShell, type NavItem } from "@/components/dashboard/panel-shell";
 
 const NAV: NavItem[] = [
   { href: "/staff", label: "Mis citas", icon: CalendarDays },
+  { href: "/staff/cuenta", label: "Mi cuenta", icon: UserRound },
 ];
 
 export default async function StaffLayout({

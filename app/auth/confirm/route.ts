@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Objetivo de los enlaces de correo (invitación de staff, confirmación de
- * cuenta, recuperación). Acepta `token_hash`+`type` (verifyOtp) o `code`
- * (PKCE). Redirige a `next` (ruta interna).
+ * cuenta, recuperación, cambio de correo). Acepta `token_hash`+`type`
+ * (verifyOtp) o `code` (PKCE). Redirige a `next` (ruta interna).
  *
  * Plantillas de correo de Supabase → enlazar a:
  *   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/auth/definir-clave
@@ -25,7 +25,11 @@ export async function GET(request: Request) {
   const supabase = await createClient();
 
   if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+    const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+    // Cambio de correo a medias: el primero de los dos enlaces no da sesión.
+    if (!error && type === "email_change" && !data.session) {
+      return NextResponse.redirect(`${origin}/auth/cambio-correo`);
+    }
     if (!error) return NextResponse.redirect(`${origin}${next}`);
   } else if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);

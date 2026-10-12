@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
+const PANEL_ROOTS = new Set(["/dashboard", "/staff", "/superadmin"]);
+
 export function NavLink({
   href,
   label,
@@ -20,9 +22,10 @@ export function NavLink({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  // La raíz de cada panel sólo se marca en sí misma, no en sus subpáginas.
   const active =
     pathname === href ||
-    (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+    (!PANEL_ROOTS.has(href) && pathname.startsWith(`${href}/`));
 
   return (
     <Link

@@ -5,6 +5,7 @@ import { getMyBusiness } from "@/lib/businesses/queries";
 import { clientEnv } from "@/lib/env";
 
 import { QrCard } from "@/components/businesses/qr-card";
+import { AccountSection } from "@/components/account/account-section";
 
 import { ConfiguracionForm } from "./configuracion-form";
 
@@ -20,6 +21,9 @@ export default async function ConfiguracionPage() {
       <ConfiguracionForm business={business} hostBase={hostBase} />
       <div className="mx-auto max-w-2xl">
         <QrCard slug={business.slug} />
+      </div>
+      <div id="cuenta" className="mx-auto max-w-2xl scroll-mt-20">
+        <AccountSection />
       </div>
     </div>
   );

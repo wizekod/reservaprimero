@@ -53,7 +53,7 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
   pone `{{ .SiteURL }}` en los enlaces de los correos de abajo.
 - **URL Configuration → Redirect URLs**: añade
   `http://localhost:3000/**` y `https://reservaprimero.com/**`.
-- **Email Templates**: cambia el enlace de estas tres plantillas para que
+- **Email Templates**: cambia el enlace de estas cuatro plantillas para que
   apunte a `/auth/confirm` con `token_hash`. El de por defecto
   (`{{ .ConfirmationURL }}`) usa PKCE y sólo funciona si el correo se abre en
   el mismo navegador donde se pidió; abierto desde el móvil, falla.
@@ -63,6 +63,12 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
   | *Invite user* | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/auth/definir-clave` |
   | *Confirm signup* | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/onboarding` |
   | *Reset password* | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/definir-clave` |
+  | *Change email address* | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change&next=/dashboard` |
+
+  Con *Secure email change* activado (Authentication → Providers → Email,
+  activo por defecto) el cambio de correo manda un enlace al correo actual y
+  otro al nuevo, y no se aplica hasta abrir los dos. El primero lleva a
+  `/auth/cambio-correo`, que avisa de que falta el otro.
 - **SMTP Settings**: configura un SMTP propio; el de Supabase por defecto solo
   sirve para pruebas (pocos correos/hora).
 
@@ -223,6 +229,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://reservaprimero.com/login # 200
 
 - [ ] Registro de negocio → onboarding → panel.
 - [ ] "¿La olvidaste?" en `/login` → correo → enlace abierto en otro dispositivo → nueva contraseña → panel.
+- [ ] Configuración → Mi cuenta: cambiar nombre, contraseña (cierra los otros dispositivos) y correo (llegan dos enlaces; tras abrir ambos se entra con el nuevo).
 - [ ] Crear servicio, staff (con correo → aceptar invitación → panel `/staff`), horario.
 - [ ] Reserva pública en `/{slug}` (con y sin "cualquiera disponible").
 - [ ] Cancelar y reagendar desde el enlace `/reservas/{token}`.
