@@ -14,7 +14,7 @@ const features = [
   {
     icon: CalendarCheck,
     title: "Página de reservas propia",
-    body: "Tus clientes reservan en reservoprimero.com/tu-negocio. Sin apps, sin llamadas, sin crear cuenta.",
+    body: "Tus clientes reservan en reservaprimero.com/tu-negocio. Sin apps, sin llamadas, sin crear cuenta.",
   },
   {
     icon: Clock,
@@ -106,7 +106,7 @@ export default function Home() {
           <div className="mx-auto mt-14 max-w-md rounded-2xl border border-border bg-card p-2 shadow-2xl shadow-primary/10">
             <div className="rounded-xl bg-muted/50 p-5 text-left">
               <p className="text-xs font-medium text-muted-foreground">
-                reservoprimero.com/barberiajuanito
+                reservaprimero.com/barberiajuanito
               </p>
               <p className="mt-3 font-semibold">Elige día y hora</p>
               <div className="mt-3 grid grid-cols-4 gap-2">

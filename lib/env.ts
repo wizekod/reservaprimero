@@ -11,7 +11,11 @@ import { z } from "zod";
 const clientSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  NEXT_PUBLIC_APP_URL: z.string().url(),
+  // Sin barra final: se concatena con rutas que ya empiezan por "/".
+  NEXT_PUBLIC_APP_URL: z
+    .string()
+    .url()
+    .transform((u) => u.replace(/\/+$/, "")),
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
 });
 

@@ -38,7 +38,7 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
 | `NEXT_PUBLIC_SUPABASE_URL` | siempre | Supabase → Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | siempre | idem |
 | `SUPABASE_SERVICE_ROLE_KEY` | siempre (server) | idem (secreto) |
-| `NEXT_PUBLIC_APP_URL` | siempre | `https://reservoprimero.com` |
+| `NEXT_PUBLIC_APP_URL` | siempre | `https://reservaprimero.com` (sin `www`; la barra final se ignora) |
 | `CRON_SECRET` | recordatorios | genera uno aleatorio (`openssl rand -hex 32`) |
 | `RESEND_API_KEY` + `RESEND_FROM_EMAIL` | email | Resend → API Keys + dominio verificado |
 | `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp | Meta Business Manager (ver §6) |
@@ -49,8 +49,10 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
 
 ## 3. Supabase Auth (para invitaciones de staff y confirmación de correo)
 
+- **URL Configuration → Site URL**: `https://reservaprimero.com`. Es lo que
+  pone `{{ .SiteURL }}` en los enlaces de los correos de abajo.
 - **URL Configuration → Redirect URLs**: añade
-  `http://localhost:3000/**` y `https://reservoprimero.com/**`.
+  `http://localhost:3000/**` y `https://reservaprimero.com/**`.
 - **Email Templates** (*Invite user*, *Confirm signup*, *Reset password*): el
   enlace debe apuntar a
   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/auth/definir-clave`
@@ -63,7 +65,7 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
 1. Crea un **producto "Premium"** con un **precio recurrente mensual**.
 2. Pega el `price_id` en `/superadmin/planes` (campo *Stripe price ID* del plan
    Premium).
-3. Crea un **webhook endpoint** → `https://reservoprimero.com/api/webhooks/stripe`
+3. Crea un **webhook endpoint** → `https://reservaprimero.com/api/webhooks/stripe`
    con los eventos: `checkout.session.completed`,
    `customer.subscription.created`, `customer.subscription.updated`,
    `customer.subscription.deleted`. Copia el *Signing secret* →
@@ -156,7 +158,34 @@ Meta revisa cada plantilla (de minutos a un día). Mientras no esté aprobada,
 los envíos fallan y quedan en `notifications_log` con `status = failed` y el
 error de Meta.
 
-## 7. Checklist de QA manual antes de anunciar
+## 7. Dominio `reservaprimero.com`
+
+El dominio canónico es `reservaprimero.com`, sin `www`: todas las URLs que
+genera la app (correos, WhatsApp, QR, Stripe, invitaciones) salen de
+`NEXT_PUBLIC_APP_URL`.
+
+1. **Vercel → Project → Settings → Domains**: añade `reservaprimero.com` y
+   `www.reservaprimero.com`, y configura este último como *Redirect to*
+   `reservaprimero.com` (308). Así la sesión vive en un único host.
+2. **Cloudflare → DNS**: crea los registros que pida Vercel (A del apex y
+   CNAME de `www`) con *Proxy status* **DNS only** (nube gris). Con el proxy
+   naranja, Vercel puede no emitir o no renovar el certificado; si se quiere
+   el proxy, SSL/TLS en **Full (strict)**.
+3. **Resend → Domains**: añade `reservaprimero.com` y crea en Cloudflare los
+   registros SPF/DKIM que indique (DNS only). Después
+   `RESEND_FROM_EMAIL="ReservaPrimero <reservas@reservaprimero.com>"`.
+4. **Cloudflare → Turnstile**: en el widget, hostname `reservaprimero.com`.
+5. **Supabase** (Site URL y Redirect URLs, §3) y **Stripe** (webhook, §4) ya
+   apuntan a `reservaprimero.com`.
+
+Comprobación:
+
+```bash
+curl -sI https://www.reservaprimero.com | grep -i -E "^HTTP|^location"   # 308 → https://reservaprimero.com/
+curl -s -o /dev/null -w "%{http_code}\n" https://reservaprimero.com/login # 200
+```
+
+## 8. Checklist de QA manual antes de anunciar
 
 - [ ] Registro de negocio → onboarding → panel.
 - [ ] Crear servicio, staff (con correo → aceptar invitación → panel `/staff`), horario.
