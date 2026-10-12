@@ -5,6 +5,8 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth/dal";
+import { getStripe } from "@/lib/stripe/client";
+import { MEDIA_BUCKET, type MediaKind } from "@/lib/storage/media";
 import type { BusinessStatus } from "@/lib/supabase/database.types";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
 
@@ -33,6 +35,97 @@ export async function setBusinessStatus(
   if (error) return { ok: false, error: "No se pudo actualizar." };
 
   revalidatePath("/superadmin");
+  return { ok: true };
+}
+
+const MEDIA_KINDS: MediaKind[] = ["staff", "services", "logos"];
+
+/**
+ * Borra un negocio y todo lo suyo. Irreversible, así que sólo procede si el
+ * negocio ya está suspendido y `confirmSlug` coincide con su slug (el
+ * diálogo pide escribirlo).
+ *
+ * Orden: primero lo externo (Stripe, Storage), que es lo que se puede
+ * reintentar si falla, y al final la fila. Las FK en cascada se llevan
+ * servicios, staff, horarios, clientes, historia clínica, citas y logs.
+ * Después se borran las cuentas del dueño y del staff, que sin negocio
+ * quedarían huérfanas.
+ */
+export async function deleteBusiness(
+  id: string,
+  confirmSlug: string,
+): Promise<Result> {
+  if (!(await assertSuperadmin())) return { ok: false, error: "No autorizado." };
+
+  const admin = createAdminClient();
+  const { data: biz } = await admin
+    .from("businesses")
+    .select("slug, status, stripe_subscription_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!biz) return { ok: false, error: "Negocio no encontrado." };
+  if (biz.status !== "suspended") {
+    return { ok: false, error: "Suspende el negocio antes de borrarlo." };
+  }
+  if (confirmSlug.trim() !== biz.slug) {
+    return { ok: false, error: "El slug no coincide." };
+  }
+
+  // Sin esto Stripe seguiría cobrando a un negocio que ya no existe.
+  const stripe = getStripe();
+  if (biz.stripe_subscription_id && stripe) {
+    try {
+      await stripe.subscriptions.cancel(biz.stripe_subscription_id);
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code !== "resource_missing") {
+        return { ok: false, error: "No se pudo cancelar la suscripción en Stripe." };
+      }
+    }
+  }
+
+  // Las imágenes son públicas: avatares del staff incluidos.
+  const storage = admin.storage.from(MEDIA_BUCKET);
+  for (const kind of MEDIA_KINDS) {
+    const { data: files, error } = await storage.list(`${id}/${kind}`, {
+      limit: 1000,
+    });
+    if (error) return { ok: false, error: "No se pudieron borrar las imágenes." };
+    if (files.length > 0) {
+      const { error: rmError } = await storage.remove(
+        files.map((f) => `${id}/${kind}/${f.name}`),
+      );
+      if (rmError) return { ok: false, error: "No se pudieron borrar las imágenes." };
+    }
+  }
+
+  // Dueño y staff con cuenta: todos llevan `profiles.business_id`. Se leen
+  // antes de borrar porque después esa columna queda en null. No se usa
+  // `staff_members.profile_id`: si apuntara por error a otro negocio, se
+  // borraría una cuenta ajena.
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("business_id", id)
+    .neq("role", "superadmin");
+  const userIds = (profiles ?? []).map((p) => p.id);
+
+  const { error } = await admin.from("businesses").delete().eq("id", id);
+  if (error) return { ok: false, error: "No se pudo borrar el negocio." };
+
+  const failed: string[] = [];
+  for (const uid of userIds) {
+    const { error: userError } = await admin.auth.admin.deleteUser(uid);
+    if (userError) failed.push(uid);
+  }
+
+  revalidatePath("/superadmin");
+  if (failed.length > 0) {
+    return {
+      ok: true,
+      error: `Negocio borrado, pero ${failed.length} cuenta(s) de usuario no se pudieron borrar.`,
+    };
+  }
   return { ok: true };
 }
 

@@ -8,6 +8,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { BusinessStatusActions } from "@/components/superadmin/business-status-actions";
+import { DeleteBusinessDialog } from "@/components/superadmin/delete-business-dialog";
 
 export const metadata: Metadata = { title: "Plataforma · ReservaPrimero" };
 
@@ -103,8 +104,13 @@ export default async function SuperadminPage() {
                     {b.planName ?? "—"}
                   </td>
                   <td className="px-3 py-2 tabular-nums">{b.appointmentCount}</td>
-                  <td className="px-3 py-2 text-right">
-                    <BusinessStatusActions id={b.id} status={b.status} />
+                  <td className="px-3 py-2">
+                    <div className="flex justify-end gap-1">
+                      <BusinessStatusActions id={b.id} status={b.status} />
+                      {b.status === "suspended" && (
+                        <DeleteBusinessDialog id={b.id} name={b.name} slug={b.slug} />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
