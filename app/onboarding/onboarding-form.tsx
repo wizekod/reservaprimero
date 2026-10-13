@@ -20,7 +20,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export function OnboardingForm({ hostBase }: { hostBase: string }) {
+export function OnboardingForm({
+  hostBase,
+  initialSlug,
+}: {
+  hostBase: string;
+  initialSlug?: string;
+}) {
   const [state, formAction, pending] = useActionState<
     BusinessFormState,
     FormData
@@ -53,7 +59,11 @@ export function OnboardingForm({ hostBase }: { hostBase: string }) {
             ) : null}
           </div>
 
-          <SlugField hostBase={hostBase} serverError={state.fieldErrors?.slug} />
+          <SlugField
+            hostBase={hostBase}
+            initialValue={initialSlug}
+            serverError={state.fieldErrors?.slug}
+          />
 
           <div className="grid gap-2">
             <Label htmlFor="timezone">Zona horaria</Label>

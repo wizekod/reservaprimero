@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
 import { checkSlug } from "@/lib/businesses/actions";
 import { slugify, validateSlug } from "@/lib/businesses/slug";
@@ -16,17 +16,36 @@ type Status =
 export function SlugField({
   hostBase,
   defaultValue = "",
+  initialValue,
   exceptSelf = false,
   serverError,
 }: {
   hostBase: string;
   defaultValue?: string;
+  /** Valor sugerido (no guardado): se muestra y se comprueba al montar. */
+  initialValue?: string;
   exceptSelf?: boolean;
   serverError?: string[];
 }) {
-  const [value, setValue] = useState(defaultValue);
-  const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [value, setValue] = useState(initialValue ?? defaultValue);
+  const [status, setStatus] = useState<Status>(
+    initialValue ? { kind: "checking" } : { kind: "idle" },
+  );
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!initialValue) return;
+    startTransition(async () => {
+      const res = await checkSlug(initialValue, exceptSelf);
+      setStatus(
+        res.available
+          ? { kind: "ok" }
+          : { kind: "error", reason: res.reason ?? "No disponible." },
+      );
+    });
+    // Sólo al montar: después manda lo que escriba el usuario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const runCheck = useCallback(

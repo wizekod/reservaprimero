@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { clientEnv } from "@/lib/env";
 import { roleHome } from "@/lib/auth/roles";
+import { slugify, validateSlug } from "@/lib/businesses/slug";
 import type { UserRole } from "@/lib/supabase/database.types";
 
 export type AuthFormState = {
@@ -79,11 +80,19 @@ export async function signUp(
   }
 
   const supabase = await createClient();
+  // Enlace elegido en la landing: sólo una sugerencia para el onboarding,
+  // que vuelve a validar disponibilidad al crear el negocio.
+  const rawSlug = formData.get("desiredSlug");
+  const desiredSlug =
+    typeof rawSlug === "string" && validateSlug(slugify(rawSlug)).ok
+      ? slugify(rawSlug)
+      : undefined;
+
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { full_name: parsed.data.fullName },
+      data: { full_name: parsed.data.fullName, ...(desiredSlug ? { desired_slug: desiredSlug } : {}) },
       emailRedirectTo: `${clientEnv.NEXT_PUBLIC_APP_URL}/auth/callback`,
     },
   });

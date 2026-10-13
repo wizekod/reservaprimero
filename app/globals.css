@@ -191,3 +191,43 @@
     @apply -translate-y-0.5 shadow-lg shadow-primary/5;
   }
 }
+
+/* ── Landing: animaciones suaves (se apagan con reduced-motion) ── */
+@keyframes rp-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes rp-stack {
+  0% { opacity: 0; transform: translateY(18px) scale(0.96); }
+  5%, 22% { opacity: 1; transform: translateY(0) scale(1); }
+  27%, 100% { opacity: 0; transform: translateY(-14px) scale(0.98); }
+}
+@keyframes rp-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes rp-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes rp-reveal {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer utilities {
+  .rp-float { animation: rp-float 5s ease-in-out infinite; }
+  .rp-stack { animation: rp-stack 8s ease-in-out infinite both; }
+  .rp-pop { animation: rp-pop 0.7s ease-out both; }
+  .rp-marquee { animation: rp-marquee 40s linear infinite; }
+  .rp-reveal { animation: rp-reveal 0.7s ease-out both; }
+  /* Bloques oscuros de la landing: el índigo de la marca casi negro */
+  .bg-ink { background-color: oklch(0.2 0.035 274); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-float, .rp-pop, .rp-marquee, .rp-reveal { animation: none; }
+  .rp-stack { animation: none; opacity: 0; }
+  .rp-stack:first-child { opacity: 1; }
+}

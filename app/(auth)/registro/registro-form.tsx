@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export function RegistroForm() {
+export function RegistroForm({ desiredSlug }: { desiredSlug?: string }) {
   const [state, formAction, pending] = useActionState<AuthFormState, FormData>(
     signUp,
     {},
@@ -52,6 +52,16 @@ export function RegistroForm() {
             <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {state.error}
             </p>
+          ) : null}
+
+          {desiredSlug ? (
+            <>
+              <input type="hidden" name="desiredSlug" value={desiredSlug} />
+              <p className="rounded-md bg-accent px-3 py-2 text-sm text-accent-foreground">
+                Tu enlace será <span className="font-medium">/{desiredSlug}</span>; lo confirmas al
+                crear tu negocio.
+              </p>
+            </>
           ) : null}
 
           <div className="grid gap-2">
