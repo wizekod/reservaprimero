@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarCheck } from "lucide-react";
+
+import { pwaMetadata } from "@/lib/pwa/metadata";
+
+// Quien agrega la web app desde el login también la instala.
+export const metadata: Metadata = pwaMetadata;
 
 export default function AuthLayout({
   children,

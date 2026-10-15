@@ -7,6 +7,8 @@ import type {
   Enums,
 } from "@/lib/supabase/database.types";
 import { sendEmail, type SendResult } from "@/lib/notifications/email";
+import { sendPushToUser } from "@/lib/notifications/push";
+import { zonedDateAndMinutes } from "@/lib/availability/tz";
 import {
   sendWhatsApp,
   toWhatsAppAddress,
@@ -15,6 +17,7 @@ import {
 
 type NotificationType = Enums<"notification_type">; // confirmation | reminder | cancellation
 type Recipient = "customer" | "business" | "staff";
+type Channel = Enums<"notification_channel">; // email | whatsapp | push
 
 type Ctx = {
   id: string;
@@ -30,7 +33,9 @@ type Ctx = {
   customerEmail: string | null;
   customerPhone: string | null;
   customerPhoneKey: string | null;
+  ownerId: string | null;
   ownerEmail: string | null;
+  staffProfileId: string | null;
   staffEmail: string | null;
   notifyStaff: boolean;
 };
@@ -70,6 +75,7 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     whatsappEnabled = features.whatsapp === true;
   }
 
+  let ownerId: string | null = null;
   let ownerEmail: string | null = null;
   const { data: owner } = await admin
     .from("profiles")
@@ -79,6 +85,7 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     .limit(1)
     .maybeSingle();
   if (owner) {
+    ownerId = owner.id;
     const { data: u } = await admin.auth.admin.getUserById(owner.id);
     ownerEmail = u.user?.email ?? null;
   }
@@ -106,7 +113,9 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     customerEmail: customer.email,
     customerPhone: customer.phone,
     customerPhoneKey: customer.phone_key,
+    ownerId,
     ownerEmail,
+    staffProfileId: staff.profile_id,
     staffEmail,
     notifyStaff: business.notify_staff_on_booking,
   };
@@ -141,7 +150,7 @@ const waFull = (ctx: Ctx, template: WhatsAppTemplate) => ({
 
 async function alreadySent(
   appointmentId: string,
-  channel: "email" | "whatsapp",
+  channel: Channel,
   type: NotificationType,
   recipient: Recipient,
   offset: number | null,
@@ -162,7 +171,7 @@ async function alreadySent(
 
 async function logSend(
   appointmentId: string,
-  channel: "email" | "whatsapp",
+  channel: Channel,
   type: NotificationType,
   recipient: Recipient,
   offset: number | null,
@@ -192,6 +201,8 @@ async function deliver(
     whatsapp: { template: WhatsAppTemplate; params: string[] };
     ownerText?: string;
     staffText?: string;
+    /** Título del push al equipo; sin él no se manda push. */
+    teamTitle?: string;
     skipDedupe?: boolean;
   },
 ) {
@@ -244,6 +255,43 @@ async function deliver(
       await logSend(ctx.id, "email", type, "staff", offset, r);
     }
   }
+
+  // Push al equipo: lo mismo que los avisos de arriba, en el teléfono y sin
+  // coste por mensaje. El correo se mantiene para quien no lo active.
+  if (opts.teamTitle) {
+    const date = zonedDateAndMinutes(ctx.startAt, ctx.timeZone).date;
+    const body = `${ctx.serviceName} · ${whenText(ctx)}\n${ctx.customerName}`;
+
+    if (opts.ownerText && ctx.ownerId) {
+      if (opts.skipDedupe || !(await alreadySent(ctx.id, "push", type, "business", offset))) {
+        const r = await sendPushToUser(ctx.ownerId, {
+          title: `${opts.teamTitle} · ${ctx.businessName}`,
+          body: `${body} · con ${ctx.staffName}`,
+          url: `/dashboard/calendario?d=${date}`,
+          tag: `cita-${ctx.id}`,
+        });
+        await logSend(ctx.id, "push", type, "business", offset, r);
+      }
+    }
+
+    // Si el dueño también atiende, ya recibió el aviso de arriba.
+    if (
+      opts.staffText &&
+      ctx.notifyStaff &&
+      ctx.staffProfileId &&
+      ctx.staffProfileId !== ctx.ownerId
+    ) {
+      if (opts.skipDedupe || !(await alreadySent(ctx.id, "push", type, "staff", offset))) {
+        const r = await sendPushToUser(ctx.staffProfileId, {
+          title: opts.teamTitle,
+          body,
+          url: `/staff?d=${date}`,
+          tag: `cita-${ctx.id}`,
+        });
+        await logSend(ctx.id, "push", type, "staff", offset, r);
+      }
+    }
+  }
 }
 
 async function clearSentLogs(appointmentId: string, type: NotificationType) {
@@ -269,6 +317,7 @@ export async function notifyBookingCreated(appointmentId: string): Promise<void>
       `con ${ctx.staffName} ${confirmed ? "está confirmada" : "quedó pendiente de confirmación"}.\n\n` +
       `Para cancelar o reagendar: ${manageUrl(ctx)}`,
     whatsapp: waFull(ctx, "cita_confirmada"),
+    teamTitle: "Nueva reserva",
     ownerText:
       `Nueva reserva: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.staffName}\n` +
       `Cliente: ${ctx.customerName}${ctx.customerPhone ? ` (${ctx.customerPhone})` : ""}`,
@@ -304,6 +353,7 @@ export async function notifyBookingCancelled(appointmentId: string): Promise<voi
       template: "cita_cancelada",
       params: [ctx.customerName, ctx.businessName, ctx.serviceName, whenText(ctx)],
     },
+    teamTitle: "Reserva cancelada",
     ownerText: `Reserva cancelada: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.customerName}`,
     staffText:
       `${ctx.staffName}, se canceló tu cita de ${ctx.serviceName} del ${whenText(ctx)} ` +
@@ -322,6 +372,7 @@ export async function notifyBookingRescheduled(appointmentId: string): Promise<v
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} quedó para el ${whenText(ctx)} ` +
       `con ${ctx.staffName}.\n\nGestionar: ${manageUrl(ctx)}`,
     whatsapp: waFull(ctx, "cita_reagendada"),
+    teamTitle: "Reserva reagendada",
     ownerText: `Reserva reagendada: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.customerName}`,
     staffText:
       `${ctx.staffName}, tu cita de ${ctx.serviceName} con ${ctx.customerName} ` +

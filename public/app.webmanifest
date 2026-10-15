@@ -1,0 +1,17 @@
+{
+  "name": "ReservaPrimero",
+  "short_name": "ReservaPrimero",
+  "description": "Tu agenda de citas y los avisos de tu equipo.",
+  "id": "/dashboard",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "lang": "es",
+  "background_color": "#ffffff",
+  "theme_color": "#5561e7",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

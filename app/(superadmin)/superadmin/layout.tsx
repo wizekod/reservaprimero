@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { LayoutGrid, Tags, UserRound } from "lucide-react";
 
 import { requireRole } from "@/lib/auth/dal";
+import { pwaMetadata } from "@/lib/pwa/metadata";
 import { ROLE_LABEL } from "@/lib/auth/roles";
 import { PanelShell, type NavItem } from "@/components/dashboard/panel-shell";
 
@@ -9,6 +11,8 @@ const NAV: NavItem[] = [
   { href: "/superadmin/planes", label: "Planes", icon: Tags },
   { href: "/superadmin/cuenta", label: "Mi cuenta", icon: UserRound },
 ];
+
+export const metadata: Metadata = pwaMetadata;
 
 export default async function SuperadminLayout({
   children,

@@ -148,6 +148,7 @@ Esta es la lista completa de lo que hace ReservaSimple hoy. Tú decides qué mov
 - **WhatsApp**: Cloud API de Meta, directa y sin intermediario (se descartó Twilio por su comisión por mensaje). Un único número de ReservaPrimero para todos los negocios; un número por negocio exigiría ser Tech Provider + Embedded Signup (Fase 3). Los mensajes que inicia el negocio sólo pueden ser plantillas aprobadas (`cita_confirmada`, `cita_reagendada`, `cita_recordatorio`, `cita_cancelada`, categoría Utility; texto en DEPLOY.md). El destinatario sale de `customers.phone_key` (E.164).
 - **Recordatorios programados**: pg_cron en Supabase llama cada 30 min a `/api/cron/reminders` (no Vercel Cron: en Hobby sólo hay crons diarios y uno más frecuente bloquea el despliegue) que revisa citas próximas y dispara recordatorios según reglas configurables (ej. 24h antes, 2h antes).
 - Registrar cada envío en `notifications_log` para trazabilidad y para evitar duplicados/reintentos.
+- **Avisos al equipo** (dueño y staff): correo + **push web** (Web Push con VAPID, `lib/notifications/push.ts`), nunca WhatsApp — el push no cuesta por mensaje. Una fila de `push_subscriptions` por dispositivo; se activa en Mi cuenta. El panel es una web app instalable (`public/app.webmanifest`, `public/sw.js`), sólo en paneles y login, no en las páginas públicas de reserva. En iPhone requiere agregarla a la pantalla de inicio (iOS 16.4+).
 
 ## 9. Suscripciones y cobros (Stripe — SaaS al negocio)
 
@@ -219,6 +220,10 @@ WHATSAPP_TEMPLATE_LANG=es
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
 
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=https://reservaprimero.com
+
 NEXT_PUBLIC_APP_URL=https://reservaprimero.com
 CRON_SECRET=
 ```
@@ -248,14 +253,14 @@ CRON_SECRET=
 - [~] Recordatorios programados — `app/api/cron/reminders` (24h y 2h antes + resumen diario), protegido por `CRON_SECRET`. Lo dispara pg_cron cada 30 min (migración `reminders_pg_cron`); falta aplicar la migración y cargar `app_url` + `cron_secret` en Vault (DEPLOY.md §5).
 - [~] Stripe Subscriptions (Checkout, Billing Portal, webhook, enforcement de límite Free) — código completo en modo protegido: checkout/portal/webhook + límite del plan Free ACTIVO. Falta pegar claves de Stripe y el price_id de Premium (en /superadmin/planes).
 - [~] Anti-spam (Turnstile + rate limiting) — rate limiting en memoria activo; Turnstile en modo protegido (widget + verify, no-op sin claves). Falta pegar claves de Cloudflare.
-- [~] QA end-to-end + deploy a producción — suite E2E (14 scripts, ~218 checks) en verde contra Supabase real; typecheck/lint/build ok. Deploy y activación de servicios: ver DEPLOY.md (acciones de Carlos en Vercel/Stripe/Resend/Meta/Cloudflare).
+- [~] QA end-to-end + deploy a producción — suite E2E (15 scripts, ~228 checks) en verde contra Supabase real; typecheck/lint/build ok. Deploy y activación de servicios: ver DEPLOY.md (acciones de Carlos en Vercel/Stripe/Resend/Meta/Cloudflare).
 
 ### Fase 2
 - [ ] Google Calendar sync (OAuth por staff)
 - [~] Estadísticas/reportes en dashboard admin — versión básica ya en `/dashboard/estadisticas` (citas por estado, facturación estimada, top servicios, tasa de asistencia). Faltan gráficos y comparativas.
 - [X] CRM ligero de clientes — `/dashboard/clientes` (listado con buscador por nombre o sufijo de teléfono, alta manual, ficha con datos + historia clínica + historial de citas). El teléfono identifica al cliente: un mismo número escrito de tres formas es una sola ficha. La historia clínica (`customer_notes`) sólo la ve el admin del negocio, ni el staff ni el superadmin.
 - [X] Color y foto por profesional; imagen por servicio — color en el calendario (relleno = profesional, franja = estado) y subida real a Supabase Storage.
-- [X] Avisos al equipo — resumen diario de agenda + aviso de cita nueva/cancelada/reagendada. En modo protegido sin `RESEND_API_KEY`.
+- [X] Avisos al equipo — resumen diario de agenda + aviso de cita nueva/cancelada/reagendada, por correo y por push web (web app instalable; activación por dispositivo en Mi cuenta). Correo en modo protegido sin `RESEND_API_KEY`; push sin llaves VAPID.
 - [ ] Widget embebible
 - [ ] Webhook Discord/Slack para notificación interna
 

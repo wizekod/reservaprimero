@@ -46,6 +46,8 @@ sus propios negocios con slug `qa-…` y los borra al terminar.
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` | anti-bot | Cloudflare → Turnstile |
 | `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | pagos | Stripe → Developers → API keys |
 | `STRIPE_WEBHOOK_SECRET` | pagos | Stripe → Webhooks (ver §4) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` | push al equipo | `npx web-push generate-vapid-keys` (ver §7) |
+| `VAPID_SUBJECT` | push (opcional) | `https://reservaprimero.com` por defecto |
 
 ## 3. Supabase Auth (para invitaciones de staff y confirmación de correo)
 
@@ -198,7 +200,32 @@ Meta revisa cada plantilla (de minutos a un día). Mientras no esté aprobada,
 los envíos fallan y quedan en `notifications_log` con `status = failed` y el
 error de Meta.
 
-## 7. Dominio `reservaprimero.com`
+## 7. Notificaciones push al equipo (web app)
+
+Los avisos internos (cita nueva / cancelada / reagendada y el resumen diario)
+llegan al dueño y al staff como notificación push, además de por correo. No
+tienen coste por mensaje. Cada persona las activa en **Mi cuenta →
+Notificaciones en este dispositivo**, en cada teléfono o computadora.
+
+1. Genera el par de llaves **una sola vez** y guárdalo:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+   *Public Key* → `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, *Private Key* →
+   `VAPID_PRIVATE_KEY` (secreta). Si las cambias, todos los dispositivos
+   dejan de recibir avisos hasta que los vuelvan a activar.
+2. Aplica la migración `20261014120000_push_subscriptions.sql` (tabla
+   `push_subscriptions` y canal `push` en `notifications_log`).
+3. Redeploya: la variable pública se incrusta al compilar.
+
+**iPhone**: sólo con iOS 16.4+ y la web app en la pantalla de inicio (Safari
+→ Compartir → *Agregar a pantalla de inicio*); la tarjeta de Mi cuenta lo
+explica paso a paso. En Android y computadora basta con aceptar el permiso.
+
+Comprobación: en Mi cuenta → *Enviar una de prueba*. Los avisos por cita
+quedan en `notifications_log` con `channel = 'push'`.
+
+## 8. Dominio `reservaprimero.com`
 
 El dominio canónico es `reservaprimero.com`, sin `www`: todas las URLs que
 genera la app (correos, WhatsApp, QR, Stripe, invitaciones) salen de
@@ -225,11 +252,12 @@ curl -sI https://www.reservaprimero.com | grep -i -E "^HTTP|^location"   # 308 �
 curl -s -o /dev/null -w "%{http_code}\n" https://reservaprimero.com/login # 200
 ```
 
-## 8. Checklist de QA manual antes de anunciar
+## 9. Checklist de QA manual antes de anunciar
 
 - [ ] Registro de negocio → onboarding → panel.
 - [ ] "¿La olvidaste?" en `/login` → correo → enlace abierto en otro dispositivo → nueva contraseña → panel.
 - [ ] Configuración → Mi cuenta: cambiar nombre, contraseña (cierra los otros dispositivos) y correo (llegan dos enlaces; tras abrir ambos se entra con el nuevo).
+- [ ] Mi cuenta → Activar notificaciones en un Android o computadora y en un iPhone (agregado a la pantalla de inicio) → *Enviar una de prueba* llega → reservar en `/{slug}` → llega "Nueva reserva" al dueño y al staff, y al tocarla abre el calendario en ese día.
 - [ ] Crear servicio, staff (con correo → aceptar invitación → panel `/staff`), horario.
 - [ ] Reserva pública en `/{slug}` (con y sin "cualquiera disponible").
 - [ ] Cancelar y reagendar desde el enlace `/reservas/{token}`.

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import {
   BarChart3,
@@ -13,10 +14,12 @@ import {
 } from "lucide-react";
 
 import { requireRole } from "@/lib/auth/dal";
+import { pwaMetadata } from "@/lib/pwa/metadata";
 import { ROLE_LABEL } from "@/lib/auth/roles";
 import { getMyBusiness } from "@/lib/businesses/queries";
 import { createClient } from "@/lib/supabase/server";
 import { PanelShell, type NavItem } from "@/components/dashboard/panel-shell";
+import { PushSync } from "@/components/account/push-sync";
 
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Inicio", icon: Home },
@@ -30,6 +33,8 @@ const NAV: NavItem[] = [
   { href: "/dashboard/suscripcion", label: "Mi suscripción", icon: CreditCard },
   { href: "/dashboard/configuracion", label: "Configuración", icon: Settings },
 ];
+
+export const metadata: Metadata = pwaMetadata;
 
 export default async function AdminDashboardLayout({
   children,
@@ -60,6 +65,7 @@ export default async function AdminDashboardLayout({
       planLabel={planLabel}
       publicPath={`/${business.slug}`}
     >
+      <PushSync />
       {children}
     </PanelShell>
   );

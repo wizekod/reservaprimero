@@ -498,6 +498,47 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen_at: string
+          p256dh: string
+          profile_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_seen_at?: string
+          p256dh: string
+          profile_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen_at?: string
+          p256dh?: string
+          profile_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           active: boolean
@@ -705,7 +746,7 @@ export type Database = {
     Enums: {
       appointment_status: "confirmed" | "cancelled" | "no_show"
       business_status: "active" | "suspended" | "trial"
-      notification_channel: "email" | "whatsapp"
+      notification_channel: "email" | "whatsapp" | "push"
       notification_status: "pending" | "sent" | "failed"
       notification_type: "confirmation" | "reminder" | "cancellation"
       user_role: "superadmin" | "business_admin" | "staff"
@@ -841,7 +882,7 @@ export const Constants = {
     Enums: {
       appointment_status: ["confirmed", "cancelled", "no_show"],
       business_status: ["active", "suspended", "trial"],
-      notification_channel: ["email", "whatsapp"],
+      notification_channel: ["email", "whatsapp", "push"],
       notification_status: ["pending", "sent", "failed"],
       notification_type: ["confirmation", "reminder", "cancellation"],
       user_role: ["superadmin", "business_admin", "staff"],

@@ -1,6 +1,7 @@
 import { getProfile, requireUser } from "@/lib/auth/dal";
 
 import { AccountSettings } from "./account-settings";
+import { PushCard } from "./push-card";
 
 /** Sección "Mi cuenta" lista para cualquier panel: carga sus propios datos. */
 export async function AccountSection() {
@@ -15,6 +16,12 @@ export async function AccountSection() {
         email={user.email ?? ""}
         pendingEmail={user.new_email ?? null}
       />
+      {/* Sólo el equipo de un negocio recibe avisos; el superadmin no. */}
+      {profile?.role === "business_admin" || profile?.role === "staff" ? (
+        <div className="pt-2">
+          <PushCard />
+        </div>
+      ) : null}
     </section>
   );
 }

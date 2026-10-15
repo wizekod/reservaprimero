@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/notifications/email";
+import { sendPushToUser } from "@/lib/notifications/push";
 import { todayInTz, zonedDateAndMinutes } from "@/lib/availability/tz";
 
 /**
@@ -105,6 +106,17 @@ export async function runDailyDigests(
       }`;
     };
 
+    const hora = (c: { start_at: string }) =>
+      new Date(c.start_at).toLocaleTimeString("es", {
+        timeZone: b.timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    // Las listas llegan ya ordenadas por hora y nunca vacías.
+    const resumenPush = (lista: { start_at: string }[]) =>
+      `${lista.length} cita${lista.length === 1 ? "" : "s"}` +
+      (lista[0] ? ` · la primera a las ${hora(lista[0])}` : "");
+
     const fechaLarga = new Date(`${hoy}T12:00:00Z`).toLocaleDateString("es", {
       timeZone: "UTC",
       weekday: "long",
@@ -134,6 +146,14 @@ export async function runDailyDigests(
             `${m.display_name}, tu agenda del ${fechaLarga}:\n\n` +
             suyas.map((c) => linea(c as Cita)).join("\n"),
         });
+        if (m.profile_id) {
+          await sendPushToUser(m.profile_id, {
+            title: "Tu agenda de hoy",
+            body: resumenPush(suyas),
+            url: "/staff",
+            tag: `agenda-${hoy}`,
+          });
+        }
         // Se registra aunque el envío se omita por falta de credenciales: lo
         // que se evita es reintentar el mismo resumen cada media hora.
         await admin.from("daily_digest_log").insert({
@@ -173,6 +193,12 @@ export async function runDailyDigests(
                     `${linea(c as Cita)} — ${nombres.get(c.staff_member_id) ?? "—"}`,
                 )
                 .join("\n"),
+          });
+          await sendPushToUser(owner.id, {
+            title: `Agenda de hoy · ${b.name}`,
+            body: resumenPush(deHoy),
+            url: "/dashboard/calendario",
+            tag: `agenda-${hoy}`,
           });
           await admin.from("daily_digest_log").insert({
             business_id: b.id,
