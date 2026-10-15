@@ -27,6 +27,7 @@ type Ctx = {
   serviceName: string;
   staffName: string;
   businessName: string;
+  businessSlug: string;
   timeZone: string;
   whatsappEnabled: boolean;
   customerName: string;
@@ -52,7 +53,7 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
        services ( name ),
        staff_members ( display_name, invited_email, profile_id ),
        customers ( name, email, phone, phone_key ),
-       businesses ( name, timezone, plan_id, notify_staff_on_booking )`,
+       businesses ( name, slug, timezone, plan_id, notify_staff_on_booking )`,
     )
     .eq("id", appointmentId)
     .maybeSingle();
@@ -107,6 +108,7 @@ async function loadCtx(appointmentId: string): Promise<Ctx | null> {
     serviceName: service.name,
     staffName: staff.display_name,
     businessName: business.name,
+    businessSlug: business.slug,
     timeZone: business.timezone,
     whatsappEnabled,
     customerName: customer.name,
@@ -131,6 +133,10 @@ function whenText(ctx: Ctx): string {
     minute: "2-digit",
   });
 }
+
+// Página pública del negocio, para volver a reservar tras una cancelación.
+const bookingUrl = (ctx: Ctx) =>
+  `${clientEnv.NEXT_PUBLIC_APP_URL}/${ctx.businessSlug}`;
 
 const manageUrl = (ctx: Ctx) =>
   `${clientEnv.NEXT_PUBLIC_APP_URL}/reservas/${ctx.cancelToken}`;
@@ -348,10 +354,10 @@ export async function notifyBookingCancelled(appointmentId: string): Promise<voi
     subject: `Reserva cancelada en ${ctx.businessName}`,
     customerText:
       `Hola ${ctx.customerName}, tu reserva de ${ctx.serviceName} del ${whenText(ctx)} ` +
-      `ha sido cancelada.`,
+      `ha sido cancelada.\n\nCuando gustes, puedes agendar una nueva cita aquí: ${bookingUrl(ctx)}`,
     whatsapp: {
       template: "cita_cancelada",
-      params: [ctx.customerName, ctx.businessName, ctx.serviceName, whenText(ctx)],
+      params: [ctx.customerName, ctx.businessName, whenText(ctx), bookingUrl(ctx)],
     },
     teamTitle: "Reserva cancelada",
     ownerText: `Reserva cancelada: ${ctx.serviceName} · ${whenText(ctx)} · ${ctx.customerName}`,

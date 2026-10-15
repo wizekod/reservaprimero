@@ -10,7 +10,7 @@ export const WHATSAPP_TEMPLATES = {
   cita_confirmada: 6, // nombre, negocio, servicio, fecha, profesional, enlace
   cita_reagendada: 6, // idem
   cita_recordatorio: 6, // idem
-  cita_cancelada: 4, // nombre, negocio, servicio, fecha
+  cita_cancelada: 4, // nombre, negocio, fecha, enlace para volver a reservar
 } as const;
 
 export type WhatsAppTemplate = keyof typeof WHATSAPP_TEMPLATES;

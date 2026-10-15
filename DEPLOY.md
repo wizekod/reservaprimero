@@ -191,10 +191,16 @@ Si necesitas cancelar o reagendar: {{6}}
 
 **`cita_cancelada`**
 ```
-Hola {{1}}, tu cita en {{2}} de {{3}} del {{4}} fue cancelada.
+¡Hola! *{{1}}*, te confirmamos que tu cita en *{{2}}* del *{{3}}* ha sido cancelada.
 
-Puedes volver a reservar cuando quieras.
+Cuando gustes, puedes agendar una nueva cita aquí: 👇🏻
+
+🔗 {{4}}
+
+¡Será un gusto atenderte!
 ```
+Ejemplos para la revisión de Meta: `María`, `Piedi Podología`,
+`jueves, 16 de octubre, 10:00`, `https://reservaprimero.com/piedipodologia`.
 
 Meta revisa cada plantilla (de minutos a un día). Mientras no esté aprobada,
 los envíos fallan y quedan en `notifications_log` con `status = failed` y el
