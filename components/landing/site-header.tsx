@@ -29,8 +29,8 @@ export function SiteHeader() {
   return (
     <>
       <header className="relative z-30">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Logo />
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6">
+          <Logo className="gap-1.5 text-base sm:gap-2 sm:text-lg" wordmarkClassName="max-[359px]:hidden" />
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
             {LINKS.map((l) => (
               <a key={l.href} href={l.href} className="transition-colors hover:text-foreground">
@@ -38,18 +38,19 @@ export function SiteHeader() {
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link
               href="/login"
-              className="hidden rounded-full border border-border bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-muted sm:inline-flex"
+              className="inline-flex whitespace-nowrap rounded-full border border-border bg-card px-2.5 py-2 text-sm font-medium transition-colors hover:bg-muted sm:px-4"
             >
               Ingresar
             </Link>
             <Link
               href="/registro"
-              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm shadow-primary/30 transition-opacity hover:opacity-90"
+              className="whitespace-nowrap rounded-full bg-primary px-2.5 py-2 text-sm font-medium text-primary-foreground shadow-sm shadow-primary/30 transition-opacity hover:opacity-90 sm:px-4"
             >
-              Crea tu agenda
+              <span className="sm:hidden">Empezar</span>
+              <span className="hidden sm:inline">Crea tu agenda</span>
             </Link>
           </div>
         </div>
@@ -62,20 +63,20 @@ export function SiteHeader() {
           compact ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-6 opacity-0",
         )}
       >
-        <div className="flex w-full max-w-2xl items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/85 py-2 pr-2 pl-4 shadow-xl shadow-primary/10 backdrop-blur">
-          <Logo />
+        <div className="flex w-full max-w-2xl items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/85 py-2 pr-2 pl-3 shadow-xl shadow-primary/10 backdrop-blur sm:pl-4">
+          <Logo className="text-base sm:text-lg" wordmarkClassName="max-[399px]:hidden" />
           <div className="flex items-center gap-1">
             <Link
               href="/login"
               tabIndex={compact ? 0 : -1}
-              className="hidden rounded-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
+              className="inline-flex whitespace-nowrap rounded-full px-2.5 py-2 text-sm font-medium text-muted-foreground hover:text-foreground sm:px-3"
             >
               Ingresar
             </Link>
             <Link
               href="/registro"
               tabIndex={compact ? 0 : -1}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              className="whitespace-nowrap rounded-xl bg-primary px-3 py-2 sm:px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
             >
               Probar gratis
             </Link>
