@@ -7,8 +7,8 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { clientEnv } from "@/lib/env";
 import { getMyBusinessAsAdmin } from "@/lib/businesses/queries";
+import { inviteStaff } from "@/lib/staff/invite";
 import { nextStaffColor } from "@/lib/staff/palette";
 import { MEDIA_BUCKET, isOwnMediaPath } from "@/lib/storage/media";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
@@ -45,40 +45,6 @@ const updateSchema = z.object({
   avatar_path: pathOpt,
   active: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
 });
-
-const INVITE_REDIRECT = `${clientEnv.NEXT_PUBLIC_APP_URL}/auth/confirm?next=/auth/definir-clave`;
-
-/**
- * Invita (o re-invita si hay un usuario pendiente sin sesión previa).
- * Devuelve el mensaje de error o `null`.
- */
-async function inviteStaff(
-  email: string,
-  staffMemberId: string,
-  businessId: string,
-): Promise<string | null> {
-  const admin = createAdminClient();
-  const opts = {
-    redirectTo: INVITE_REDIRECT,
-    data: { staff_member_id: staffMemberId, business_id: businessId },
-  };
-
-  let { error } = await admin.auth.admin.inviteUserByEmail(email, opts);
-
-  if (error && /already/i.test(error.message)) {
-    const { data: list } = await admin.auth.admin.listUsers();
-    const existing = list?.users?.find(
-      (u) => u.email?.toLowerCase() === email.toLowerCase(),
-    );
-    if (existing && !existing.last_sign_in_at) {
-      await admin.auth.admin.deleteUser(existing.id);
-      ({ error } = await admin.auth.admin.inviteUserByEmail(email, opts));
-    } else if (existing) {
-      return "Ese correo ya tiene una cuenta con sesión iniciada.";
-    }
-  }
-  return error ? "No se pudo enviar la invitación." : null;
-}
 
 export async function createStaff(
   _prev: FormState,

@@ -265,6 +265,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://reservaprimero.com/login # 200
 - [ ] Configuración → Mi cuenta: cambiar nombre, contraseña (cierra los otros dispositivos) y correo (llegan dos enlaces; tras abrir ambos se entra con el nuevo).
 - [ ] Mi cuenta → Activar notificaciones en un Android o computadora y en un iPhone (agregado a la pantalla de inicio) → *Enviar una de prueba* llega → reservar en `/{slug}` → llega "Nueva reserva" al dueño y al staff, y al tocarla abre el calendario en ese día.
 - [ ] Crear servicio, staff (con correo → aceptar invitación → panel `/staff`), horario.
+- [ ] Ficha de un staff: cambiarle el correo (entra con el nuevo) y la contraseña (su sesión abierta se cierra). Migración `20261016120000_revoke_user_sessions.sql` aplicada.
 - [ ] Reserva pública en `/{slug}` (con y sin "cualquiera disponible").
 - [ ] Cancelar y reagendar desde el enlace `/reservas/{token}`.
 - [ ] Agenda admin: confirmar / completar / no-show / cancelar.

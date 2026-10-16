@@ -15,6 +15,7 @@ import type { StaffMemberWithMeta } from "@/lib/staff/queries";
 import { STAFF_COLORS } from "@/lib/staff/palette";
 import { cn } from "@/lib/utils";
 import { ImageField } from "@/components/media/image-field";
+import { StaffAccessCard } from "@/components/staff/staff-access-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,10 +38,16 @@ export function StaffEditor({
   staff,
   services,
   businessId,
+  loginEmail,
+  isAdminAccount,
 }: {
   staff: StaffMemberWithMeta;
   services: ServiceRow[];
   businessId: string;
+  /** Correo real de su cuenta (auth.users) si ya aceptó la invitación. */
+  loginEmail: string | null;
+  /** Es la cuenta del dueño, que también atiende. */
+  isAdminAccount: boolean;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     updateStaff,
@@ -185,6 +192,30 @@ export function StaffEditor({
           </CardFooter>
         </Card>
       </form>
+
+      {isAdminAccount ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Acceso al panel</CardTitle>
+            <CardDescription>
+              Es tu propia cuenta. Tu correo y tu contraseña se cambian en{" "}
+              <Link
+                href="/dashboard/configuracion#cuenta"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                Configuración → Mi cuenta
+              </Link>
+              .
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
+        <StaffAccessCard
+          staffId={staff.id}
+          status={staff.status}
+          currentEmail={loginEmail ?? staff.invited_email}
+        />
+      )}
 
       <Card>
         <CardHeader>

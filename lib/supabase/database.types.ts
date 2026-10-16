@@ -733,6 +733,7 @@ export type Database = {
       is_superadmin: { Args: never; Returns: boolean }
       owns_media_path: { Args: { object_name: string }; Returns: boolean }
       phone_dial_code: { Args: { tz: string }; Returns: string }
+      revoke_user_sessions: { Args: { p_user_id: string }; Returns: undefined }
       upsert_customer: {
         Args: {
           p_business_id: string
