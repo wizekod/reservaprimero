@@ -12,6 +12,8 @@ export type GetSlotsParams = {
   now?: Date;
   /** Cita a ignorar al calcular "ocupado" (para reagendar sin chocar consigo misma). */
   excludeAppointmentId?: string;
+  /** Ver `ComputeInput.includeTaken`: sólo para mostrar, nunca para validar. */
+  includeTaken?: boolean;
 };
 
 export type SlotsResult =
@@ -111,6 +113,7 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
 
   const slots = computeAvailability({
     now: p.now ?? new Date(),
+    includeTaken: p.includeTaken,
     timeZone: business.timezone,
     service: {
       durationMinutes: service.duration_minutes,

@@ -158,6 +158,9 @@ export async function fetchSlots(
     staffId: staffId ?? undefined,
     dateFrom: desde,
     dateTo: limite,
+    // Los ocupados van tachados en la página de reservas. createBooking
+    // valida con su propia llamada a getSlots, sin ellos.
+    includeTaken: true,
   });
 }
 

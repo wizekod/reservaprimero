@@ -158,12 +158,15 @@ export function MonthCalendar({
  */
 export function SlotGrid({
   slots,
+  taken,
   label,
   onPick,
   selected,
   disabled,
 }: {
   slots: string[];
+  /** Horas ya agendadas: se ven tachadas y no se pueden elegir. */
+  taken?: Set<string>;
   label: (iso: string) => string;
   onPick: (iso: string) => void;
   selected?: string | null;
@@ -171,23 +174,30 @@ export function SlotGrid({
 }) {
   return (
     <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
-      {slots.map((s) => (
-        <button
-          key={s}
-          type="button"
-          disabled={disabled}
-          onClick={() => onPick(s)}
-          aria-pressed={selected === undefined ? undefined : selected === s}
-          className={cn(
-            "rounded-xl py-3 text-sm font-medium tabular-nums transition-colors disabled:opacity-50",
-            selected === s
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted hover:bg-accent",
-          )}
-        >
-          {label(s)}
-        </button>
-      ))}
+      {slots.map((s) => {
+        const ocupado = taken?.has(s) ?? false;
+        return (
+          <button
+            key={s}
+            type="button"
+            disabled={disabled || ocupado}
+            onClick={() => onPick(s)}
+            aria-pressed={selected === undefined ? undefined : selected === s}
+            aria-label={ocupado ? `${label(s)}, ocupado` : undefined}
+            title={ocupado ? "Ya está agendado" : undefined}
+            className={cn(
+              "rounded-xl py-3 text-sm font-medium tabular-nums transition-colors",
+              ocupado
+                ? "cursor-not-allowed border border-dashed border-border bg-transparent text-muted-foreground/60 line-through decoration-muted-foreground/60"
+                : selected === s
+                  ? "bg-primary text-primary-foreground disabled:opacity-50"
+                  : "bg-muted hover:bg-accent disabled:opacity-50",
+            )}
+          >
+            {label(s)}
+          </button>
+        );
+      })}
     </div>
   );
 }

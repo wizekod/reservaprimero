@@ -34,12 +34,20 @@ export type ComputeInput = {
   rules: WeeklyRule[];
   exceptions: ScheduleException[];
   busy: BusyInterval[]; // citas pending/confirmed
+  /**
+   * Incluir también, marcados `taken`, los horarios que sólo se pierden por
+   * una cita ya agendada. La página pública los enseña tachados: el cliente
+   * ve que el negocio tiene movimiento. Nunca para validar una reserva.
+   */
+  includeTaken?: boolean;
 };
 
 export type Slot = {
   staffMemberId: string;
   start: string; // ISO instant
   end: string;
+  /** Ocupado por otra cita: se muestra, pero no se puede reservar. */
+  taken?: boolean;
 };
 
 const MIN = 60_000;
@@ -67,6 +75,7 @@ export function computeAvailability(input: ComputeInput): Slot[] {
     rules,
     exceptions,
     busy,
+    includeTaken = false,
   } = input;
 
   const durationMs = service.durationMinutes * MIN;
@@ -128,7 +137,17 @@ export function computeAvailability(input: ComputeInput): Slot[] {
           const conflict = staffBusy.some((b) =>
             overlaps(occStart, occEnd, b.start, b.end),
           );
-          if (conflict) continue;
+          if (conflict) {
+            if (includeTaken) {
+              slots.push({
+                staffMemberId: staffId,
+                start: new Date(t).toISOString(),
+                end: new Date(slotEnd).toISOString(),
+                taken: true,
+              });
+            }
+            continue;
+          }
 
           slots.push({
             staffMemberId: staffId,

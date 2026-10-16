@@ -46,6 +46,8 @@ type Business = {
 };
 
 type ChosenSlot = { start: string; staffMemberId: string };
+/** Hora del día en la rejilla: libre (con quién) u ocupada por otra cita. */
+type DaySlot = ChosenSlot & { taken: boolean };
 type Step = "service" | "staff" | "slot" | "details" | "done";
 
 const STEPS: Step[] = ["service", "staff", "slot", "details", "done"];
@@ -76,11 +78,12 @@ export function BookingFlow({
   const [tz, setTz] = useState("UTC");
   // Huecos del mes cargado, agrupados por fecha local del negocio. Elegir un
   // día sólo mira este mapa; no vuelve al servidor.
-  const [porDia, setPorDia] = useState<Map<string, ChosenSlot[]>>(new Map());
+  const [porDia, setPorDia] = useState<Map<string, DaySlot[]>>(new Map());
   const [mesCargado, setMesCargado] = useState<string | null>(null);
   const [slot, setSlot] = useState<ChosenSlot | null>(null);
 
   const slots = porDia.get(date) ?? [];
+  const freeSlots = slots.filter((s) => !s.taken);
   const slotsLoaded = mesCargado === month;
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", notes: "" });
@@ -131,25 +134,30 @@ export function BookingFlow({
       }
       setTz(res.timeZone);
 
-      const mapa = new Map<string, ChosenSlot[]>();
-      const vistos = new Set<string>();
+      // Una entrada por hora. Con "cualquiera disponible" varios
+      // profesionales ofrecen la misma: vale el primero libre, y la hora sólo
+      // sale tachada si nadie la tiene libre.
+      const porHora = new Map<string, DaySlot>();
       for (const s of res.slots) {
-        // Varios profesionales pueden ofrecer la misma hora: vale el primero.
-        if (vistos.has(s.start)) continue;
-        vistos.add(s.start);
+        const taken = s.taken === true;
+        const previo = porHora.get(s.start);
+        if (previo && (previo.taken === false || taken)) continue;
+        porHora.set(s.start, { start: s.start, staffMemberId: s.staffMemberId, taken });
+      }
+      const mapa = new Map<string, DaySlot[]>();
+      for (const s of [...porHora.values()].sort((a, b) => a.start.localeCompare(b.start))) {
         const dia = zonedDateAndMinutes(s.start, res.timeZone).date;
-        const lista = mapa.get(dia) ?? [];
-        lista.push({ start: s.start, staffMemberId: s.staffMemberId });
-        mapa.set(dia, lista);
+        mapa.set(dia, [...(mapa.get(dia) ?? []), s]);
       }
       setPorDia(mapa);
       setMesCargado(mes);
 
-      // Si el día que está elegido no tiene hueco —hoy suele caer en el día
-      // libre del profesional— se salta al primero que sí, en vez de recibir
-      // al cliente con un "no hay horarios".
-      if (!mapa.has(date)) {
-        const primero = [...mapa.keys()].sort()[0];
+      // Si el día que está elegido no tiene hueco libre —hoy suele caer en
+      // el día libre del profesional, o ya está lleno— se salta al primero
+      // que sí, en vez de recibir al cliente con un "no hay horarios".
+      const conLibre = (d: string) => mapa.get(d)?.some((s) => !s.taken) ?? false;
+      if (!conLibre(date)) {
+        const primero = [...mapa.keys()].sort().find(conLibre);
         if (primero) setDate(primero);
       }
     });
@@ -467,16 +475,24 @@ export function BookingFlow({
                       fecha.
                     </p>
                   ) : (
-                    <SlotGrid
-                      slots={slots.map((s) => s.start)}
-                      label={timeFmt}
-                      onPick={(start) => {
-                        const elegido = slots.find((s) => s.start === start);
-                        if (!elegido) return;
-                        setSlot(elegido);
-                        setStep("details");
-                      }}
-                    />
+                    <div className="space-y-3">
+                      {slotsLoaded && freeSlots.length === 0 ? (
+                        <p className="text-center text-sm text-muted-foreground">
+                          Este día ya está lleno. Prueba con otra fecha.
+                        </p>
+                      ) : null}
+                      <SlotGrid
+                        slots={slots.map((s) => s.start)}
+                        taken={new Set(slots.filter((s) => s.taken).map((s) => s.start))}
+                        label={timeFmt}
+                        onPick={(start) => {
+                          const elegido = freeSlots.find((s) => s.start === start);
+                          if (!elegido) return;
+                          setSlot({ start: elegido.start, staffMemberId: elegido.staffMemberId });
+                          setStep("details");
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               </Panel>

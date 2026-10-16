@@ -127,7 +127,8 @@ export function NewBookingForm({
       const mapa = new Map<string, Slot[]>();
       const vistos = new Set<string>();
       for (const s of res.slots) {
-        if (vistos.has(s.start)) continue;
+        // Los ocupados son para la página pública; aquí sólo se elige libre.
+        if (s.taken || vistos.has(s.start)) continue;
         vistos.add(s.start);
         const dia = zonedDateAndMinutes(s.start, res.timeZone).date;
         mapa.set(dia, [
