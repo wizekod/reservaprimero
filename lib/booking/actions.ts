@@ -311,7 +311,9 @@ export async function createBooking(
     .single();
 
   if (apptError || !appointment) {
-    if (apptError?.code === "23P01") {
+    // 23P01: el profesional; RP409: la última estación (trigger
+    // guard_station_capacity). Las dos son "alguien llegó antes".
+    if (apptError?.code === "23P01" || apptError?.code === "RP409") {
       return { ok: false, error: "Ese horario acaba de ocuparse. Elige otro." };
     }
     return { ok: false, error: "No se pudo crear la reserva." };

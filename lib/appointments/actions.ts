@@ -73,6 +73,13 @@ export async function updateAppointmentStatus(
           "No se puede reactivar: otra cita ya ocupa ese horario con el mismo profesional.",
       };
     }
+    if (error.code === "RP409") {
+      return {
+        ok: false,
+        error:
+          "No se puede reactivar: ya no queda ninguna estación de trabajo libre en ese horario.",
+      };
+    }
     return { ok: false, error: "No se pudo actualizar." };
   }
 
@@ -97,13 +104,62 @@ const adminBookingSchema = z.object({
     z.string().trim().toLowerCase().email("Correo inválido").optional(),
   ),
   notes: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
+  /** El admin confirmó agendar aunque no quede estación libre. */
+  overrideStations: z.boolean().optional(),
 });
 
 export type AdminBookingInput = z.input<typeof adminBookingSchema>;
 
 export type AdminBookingResult =
-  | { ok: false; error: string; fieldErrors?: Record<string, string[] | undefined> }
+  | {
+      ok: false;
+      error: string;
+      fieldErrors?: Record<string, string[] | undefined>;
+      /** Sin estación libre: el admin puede repetir con `overrideStations`. */
+      code?: "stations_full";
+    }
   | { ok: true; date: string };
+
+const SIN_ESTACION =
+  "A esa hora todas las estaciones de trabajo están ocupadas.";
+
+const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Horarios para "Nueva reserva" del panel. Como los de la página pública,
+ * pero al admin le llegan también, marcados, los que no tienen estación
+ * libre: puede agendarlos a sabiendas. Un profesional con permiso para crear
+ * citas los ve como no disponibles.
+ */
+export async function fetchPanelSlots(
+  serviceId: string,
+  staffId: string | null,
+  dateFrom: string,
+  dateTo: string,
+) {
+  const [access, business] = await Promise.all([getMyAccess(), getMyBusiness()]);
+  if (!access || !business || access.permissions.bookingScope === "none") {
+    return { ok: false as const, reason: "unauthorized" };
+  }
+  if (!dateRe.test(dateFrom) || !dateRe.test(dateTo) || dateTo < dateFrom) {
+    return { ok: false as const, reason: "bad_date" };
+  }
+
+  const today = todayInTz(business.timezone);
+  const desde = dateFrom < today ? today : dateFrom;
+  if (dateTo < desde) {
+    return { ok: true as const, slots: [], timeZone: business.timezone, slotIntervalMinutes: 0 };
+  }
+
+  return getSlots({
+    slug: business.slug,
+    serviceId,
+    staffId: staffId ?? undefined,
+    dateFrom: desde,
+    dateTo,
+    markStationsFull: access.role === "business_admin",
+  });
+}
 
 /**
  * Alta manual de una cita desde el panel: el admin, o un profesional con
@@ -166,21 +222,29 @@ export async function createAppointmentFromPanel(
   const startISO = new Date(b.startISO).toISOString();
   const date = todayInTz(business.timezone, new Date(startISO));
 
+  // Saltarse el límite de estaciones es sólo del admin, y sólo si lo pidió
+  // después de ver el aviso.
+  const isAdmin = access.role === "business_admin";
   const avail = await getSlots({
     slug: business.slug,
     serviceId: b.serviceId,
     staffId: b.staffMemberId,
     dateFrom: date,
     dateTo: date,
+    markStationsFull: isAdmin,
   });
-  if (
-    !avail.ok ||
-    !avail.slots.some(
-      (s) => s.staffMemberId === b.staffMemberId && s.start === startISO,
-    )
-  ) {
+  const elegido = avail.ok
+    ? avail.slots.find(
+        (s) => s.staffMemberId === b.staffMemberId && s.start === startISO,
+      )
+    : undefined;
+  if (!elegido) {
     return { ok: false, error: "Ese horario ya no está disponible." };
   }
+  if (elegido.stationsFull && !b.overrideStations) {
+    return { ok: false, error: SIN_ESTACION, code: "stations_full" };
+  }
+  const override = isAdmin && Boolean(elegido.stationsFull);
 
   const cust = await upsertCustomer(admin, {
     businessId: business.id,
@@ -206,6 +270,7 @@ export async function createAppointmentFromPanel(
       end_at: endISO,
       status: "confirmed",
       notes: b.notes ?? null,
+      station_override: override,
     })
     .select("id")
     .single();
@@ -213,6 +278,12 @@ export async function createAppointmentFromPanel(
   if (apptError || !appointment) {
     if (apptError?.code === "23P01") {
       return { ok: false, error: "Ese horario acaba de ocuparse." };
+    }
+    // Se llenó la última estación entre el cálculo y el INSERT.
+    if (apptError?.code === "RP409") {
+      return isAdmin
+        ? { ok: false, error: SIN_ESTACION, code: "stations_full" }
+        : { ok: false, error: "Ese horario acaba de ocuparse." };
     }
     return { ok: false, error: "No se pudo crear la cita." };
   }

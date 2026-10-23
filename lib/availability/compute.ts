@@ -40,6 +40,17 @@ export type ComputeInput = {
    * ve que el negocio tiene movimiento. Nunca para validar una reserva.
    */
   includeTaken?: boolean;
+  /**
+   * Estaciones de trabajo del negocio. Sólo cuando el negocio tiene límite y
+   * el servicio ocupa estación; si no, null. `busy` son las citas de TODO el
+   * negocio que ocupan estación, con su limpieza ya sumada al final.
+   */
+  stations?: { capacity: number; busy: { startAt: string; endAt: string }[] } | null;
+  /**
+   * Devolver, marcados `stationsFull`, los horarios con profesional libre
+   * pero sin estación. Sólo para el admin, que puede agendar igualmente.
+   */
+  markStationsFull?: boolean;
 };
 
 export type Slot = {
@@ -48,12 +59,35 @@ export type Slot = {
   end: string;
   /** Ocupado por otra cita: se muestra, pero no se puede reservar. */
   taken?: boolean;
+  /** Profesional libre, pero todas las estaciones ocupadas. */
+  stationsFull?: boolean;
 };
 
 const MIN = 60_000;
 
 function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number) {
   return aStart < bEnd && bStart < aEnd;
+}
+
+/**
+ * Máximo de intervalos simultáneos dentro de [start, end). El pico siempre
+ * cae en el inicio de alguno de ellos (o en `start`).
+ */
+export function maxConcurrent(
+  busy: { start: number; end: number }[],
+  start: number,
+  end: number,
+): number {
+  const hits = busy.filter((b) => b.start < end && b.end > start);
+  if (hits.length === 0) return 0;
+  const points = [start, ...hits.map((b) => Math.max(b.start, start))];
+  let max = 0;
+  for (const t of points) {
+    let n = 0;
+    for (const b of hits) if (b.start <= t && b.end > t) n += 1;
+    if (n > max) max = n;
+  }
+  return max;
 }
 
 /**
@@ -76,6 +110,8 @@ export function computeAvailability(input: ComputeInput): Slot[] {
     exceptions,
     busy,
     includeTaken = false,
+    stations = null,
+    markStationsFull = false,
   } = input;
 
   const durationMs = service.durationMinutes * MIN;
@@ -102,6 +138,11 @@ export function computeAvailability(input: ComputeInput): Slot[] {
       end: new Date(b.endAt).getTime() + bufferMs,
     });
   }
+
+  const stationBusy = (stations?.busy ?? []).map((b) => ({
+    start: new Date(b.startAt).getTime(),
+    end: new Date(b.endAt).getTime(),
+  }));
 
   const slots: Slot[] = [];
 
@@ -144,6 +185,22 @@ export function computeAvailability(input: ComputeInput): Slot[] {
                 start: new Date(t).toISOString(),
                 end: new Date(slotEnd).toISOString(),
                 taken: true,
+              });
+            }
+            continue;
+          }
+
+          // La estación se ocupa también durante la limpieza.
+          if (
+            stations &&
+            maxConcurrent(stationBusy, occStart, occEnd) >= stations.capacity
+          ) {
+            if (markStationsFull || includeTaken) {
+              slots.push({
+                staffMemberId: staffId,
+                start: new Date(t).toISOString(),
+                end: new Date(slotEnd).toISOString(),
+                ...(markStationsFull ? { stationsFull: true } : { taken: true }),
               });
             }
             continue;

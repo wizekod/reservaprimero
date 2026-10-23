@@ -155,6 +155,23 @@ export function ServiceForm({
               </div>
             </div>
 
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="uses_station"
+                defaultChecked={service?.uses_station ?? true}
+                className="mt-0.5 size-4"
+              />
+              <span>
+                Ocupa una estación de trabajo
+                <span className="block text-xs text-muted-foreground">
+                  Cuenta para el límite de estaciones (Configuración) durante
+                  la cita y el margen entre citas. Apágalo si se atiende sin
+                  sillón ni camilla.
+                </span>
+              </span>
+            </label>
+
             <ImageField
               name="image_path"
               kind="services"

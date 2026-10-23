@@ -129,11 +129,18 @@ export async function rescheduleByToken(
   const admin = createAdminClient();
   const { error } = await admin
     .from("appointments")
-    .update({ start_at: startISO, end_at: endISO, cancel_token: newToken })
+    // Si el admin la había forzado sin estación libre, eso valía para el
+    // horario de antes: en el nuevo vuelve a contar el límite.
+    .update({
+      start_at: startISO,
+      end_at: endISO,
+      cancel_token: newToken,
+      station_override: false,
+    })
     .eq("id", appt.id);
 
   if (error) {
-    if (error.code === "23P01") {
+    if (error.code === "23P01" || error.code === "RP409") {
       return { ok: false, error: "Ese horario acaba de ocuparse. Elige otro." };
     }
     return { ok: false, error: "No se pudo reagendar." };

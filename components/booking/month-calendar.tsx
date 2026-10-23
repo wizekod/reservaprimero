@@ -163,10 +163,16 @@ export function SlotGrid({
   onPick,
   selected,
   disabled,
+  warn,
 }: {
   slots: string[];
   /** Horas ya agendadas: se ven tachadas y no se pueden elegir. */
   taken?: Set<string>;
+  /**
+   * Horas que se pueden elegir con aviso (panel del admin: profesional
+   * libre, pero sin estación de trabajo libre).
+   */
+  warn?: Set<string>;
   label: (iso: string) => string;
   onPick: (iso: string) => void;
   selected?: string | null;
@@ -176,6 +182,7 @@ export function SlotGrid({
     <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4">
       {slots.map((s) => {
         const ocupado = taken?.has(s) ?? false;
+        const aviso = !ocupado && (warn?.has(s) ?? false);
         return (
           <button
             key={s}
@@ -183,15 +190,27 @@ export function SlotGrid({
             disabled={disabled || ocupado}
             onClick={() => onPick(s)}
             aria-pressed={selected === undefined ? undefined : selected === s}
-            aria-label={ocupado ? `${label(s)}, ocupado` : undefined}
-            title={ocupado ? "Ya está agendado" : undefined}
+            aria-label={
+              ocupado
+                ? `${label(s)}, ocupado`
+                : aviso
+                  ? `${label(s)}, sin estación libre`
+                  : undefined
+            }
+            title={
+              ocupado ? "Ya está agendado" : aviso ? "Sin estación libre" : undefined
+            }
             className={cn(
               "rounded-xl py-3 text-sm font-medium tabular-nums transition-colors",
               ocupado
                 ? "cursor-not-allowed border border-dashed border-border bg-transparent text-muted-foreground/60 line-through decoration-muted-foreground/60"
                 : selected === s
-                  ? "bg-primary text-primary-foreground disabled:opacity-50"
-                  : "bg-muted hover:bg-accent disabled:opacity-50",
+                  ? aviso
+                    ? "bg-amber-500 text-white disabled:opacity-50"
+                    : "bg-primary text-primary-foreground disabled:opacity-50"
+                  : aviso
+                    ? "border border-amber-400/70 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-300"
+                    : "bg-muted hover:bg-accent disabled:opacity-50",
             )}
           >
             {label(s)}

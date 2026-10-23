@@ -253,6 +253,26 @@ export function ConfiguracionForm({
               </div>
             </div>
 
+            <div className="grid gap-2 sm:max-w-sm">
+              <Label htmlFor="station_count">Estaciones de trabajo</Label>
+              <Input
+                id="station_count"
+                name="station_count"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={500}
+                placeholder="Sin límite"
+                defaultValue={business.station_count ?? ""}
+              />
+              <p className="text-xs text-muted-foreground">
+                Sillones, camillas o cabinas. Nunca habrá más citas a la vez
+                que estaciones, aunque haya profesionales libres. Déjalo vacío
+                si no aplica. En cada servicio eliges si ocupa estación.
+              </p>
+              <FieldError messages={state.fieldErrors?.station_count} />
+            </div>
+
             <div className="border-t border-border pt-4">
               <h3 className="text-sm font-semibold">Avisos al equipo</h3>
               <p className="mt-0.5 text-sm text-muted-foreground">

@@ -73,6 +73,8 @@ Tablas principales (nombres sugeridos, ajustables):
 
 **RLS**: políticas por `business_id = auth.jwt() -> business_id` para admin/staff; staff limitado además a `staff_member_id = auth.uid()`; superadmin con política que hace bypass (rol especial o uso de `service_role` en rutas server-side protegidas).
 
+**Estaciones de trabajo** (sillones, camillas, cabinas): `businesses.station_count` (null = sin límite) y `services.uses_station`. No hay más citas a la vez que estaciones entre los servicios que ocupan una, contando su limpieza (`buffer_minutes`). Lo aplica `computeAvailability` (horario sin estación = tachado en la página pública) y, como red de seguridad ante reservas simultáneas, el trigger `guard_station_capacity` (advisory lock por negocio, error `RP409`). El admin puede agendar por encima del límite desde Nueva reserva tras confirmar; queda marcado en `appointments.station_override`, que sólo escribe el servidor.
+
 **Prevención de doble-booking**: al crear una cita, validar server-side (no solo en UI) que no exista solapamiento para ese `staff_member_id` en ese rango de tiempo — usar un constraint de exclusión en Postgres (`EXCLUDE USING gist`) o una transacción con lock, no confiar solo en la validación del cliente.
 
 ## 6. Flujos clave

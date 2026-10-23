@@ -4,12 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { getBookableStaff, type BookableStaff } from "@/lib/booking/actions";
 import {
-  fetchSlots,
-  getBookableStaff,
-  type BookableStaff,
-} from "@/lib/booking/actions";
-import { createAppointmentFromPanel } from "@/lib/appointments/actions";
+  createAppointmentFromPanel,
+  fetchPanelSlots,
+} from "@/lib/appointments/actions";
 import { lookupCustomerByPhone } from "@/lib/customers/actions";
 import type { PublicService } from "@/lib/booking/queries";
 import {
@@ -26,7 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { expectedPhoneDigits, phoneLengthError } from "@/lib/customers/phone";
 import { capitalizeFirst, cn } from "@/lib/utils";
 
-type Slot = { start: string; staffMemberId: string };
+/** `stationsFull`: profesional libre pero sin estación (sólo le llega al admin). */
+type Slot = { start: string; staffMemberId: string; stationsFull?: boolean };
 
 export function NewBookingForm({
   slug,
@@ -50,6 +50,9 @@ export function NewBookingForm({
   const digitos = expectedPhoneDigits(dialCode);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // Reconocer al cliente va aparte: si compartiera `pending`, mientras se
+  // busca el teléfono se ocultarían los horarios y el botón diría "Creando…".
+  const [, startLookup] = useTransition();
 
   const [serviceId, setServiceId] = useState("");
   const [staffList, setStaffList] = useState<BookableStaff[]>([]);
@@ -69,6 +72,9 @@ export function NewBookingForm({
   const [errors, setErrors] = useState<Record<string, string[] | undefined>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [known, setKnown] = useState<string | null>(null);
+  // El servidor dijo que no queda estación (pudo llenarse después de cargar
+  // los horarios): el siguiente envío ya va confirmado.
+  const [stationsWarning, setStationsWarning] = useState(false);
 
   /**
    * Al salir del teléfono se mira si ese número ya es de un cliente del
@@ -87,7 +93,7 @@ export function NewBookingForm({
       return;
     }
     setErrors((e) => ({ ...e, phone: undefined }));
-    startTransition(async () => {
+    startLookup(async () => {
       const res = await lookupCustomerByPhone(phone);
       if (!res.found) {
         setKnown(null);
@@ -130,7 +136,7 @@ export function NewBookingForm({
     setSlot(null);
     startTransition(async () => {
       const ultimo = addDays(addMonths(mes, 1), -1);
-      const res = await fetchSlots(slug, svc, forStaff, mes, ultimo);
+      const res = await fetchPanelSlots(svc, forStaff, mes, ultimo);
       if (!res.ok) {
         setPorDia(new Map());
         setMesCargado(mes);
@@ -139,16 +145,22 @@ export function NewBookingForm({
       setTz(res.timeZone);
 
       const mapa = new Map<string, Slot[]>();
-      const vistos = new Set<string>();
+      const porHora = new Map<string, Slot>();
       for (const s of res.slots) {
         // Los ocupados son para la página pública; aquí sólo se elige libre.
-        if (s.taken || vistos.has(s.start)) continue;
-        vistos.add(s.start);
+        if (s.taken) continue;
+        // Una entrada por hora. Con estaciones el resultado es el mismo para
+        // todos los profesionales, así que basta con quedarse con el primero.
+        if (porHora.has(s.start)) continue;
+        porHora.set(s.start, {
+          start: s.start,
+          staffMemberId: s.staffMemberId,
+          stationsFull: s.stationsFull,
+        });
+      }
+      for (const s of porHora.values()) {
         const dia = zonedDateAndMinutes(s.start, res.timeZone).date;
-        mapa.set(dia, [
-          ...(mapa.get(dia) ?? []),
-          { start: s.start, staffMemberId: s.staffMemberId },
-        ]);
+        mapa.set(dia, [...(mapa.get(dia) ?? []), s]);
       }
       setPorDia(mapa);
       setMesCargado(mes);
@@ -169,7 +181,10 @@ export function NewBookingForm({
     if (d < minDate || d > maxDate) return;
     setDate(d);
     setSlot(null);
+    setStationsWarning(false);
   }
+
+  const forceStations = Boolean(slot?.stationsFull) || stationsWarning;
 
   function submit() {
     if (!service || !slot) return;
@@ -190,10 +205,13 @@ export function NewBookingForm({
         phone: form.phone,
         email: form.email,
         notes: form.notes,
+        overrideStations: forceStations,
       });
       if (res.ok) {
         toast.success("Cita creada.");
         router.push(`${agendaPath}?d=${res.date}&v=dia`);
+      } else if (res.code === "stations_full") {
+        setStationsWarning(true);
       } else {
         setFormError(res.error);
         if (res.fieldErrors) setErrors(res.fieldErrors);
@@ -308,15 +326,25 @@ export function NewBookingForm({
                     No hay horarios disponibles ese día. Prueba con otra fecha.
                   </p>
                 ) : (
-                  <SlotGrid
-                    slots={slots.map((s) => s.start)}
-                    label={timeFmt}
-                    selected={slot?.start ?? null}
-                    onPick={(start) => {
-                      const elegido = slots.find((s) => s.start === start);
-                      if (elegido) setSlot(elegido);
-                    }}
-                  />
+                  <>
+                    <SlotGrid
+                      slots={slots.map((s) => s.start)}
+                      warn={new Set(slots.filter((s) => s.stationsFull).map((s) => s.start))}
+                      label={timeFmt}
+                      selected={slot?.start ?? null}
+                      onPick={(start) => {
+                        const elegido = slots.find((s) => s.start === start);
+                        if (elegido) setSlot(elegido);
+                        setStationsWarning(false);
+                      }}
+                    />
+                    {slots.some((s) => s.stationsFull) ? (
+                      <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="size-2.5 rounded-sm border border-amber-400/70 bg-amber-500/20" />
+                        Sin estación libre: puedes agendarla igualmente.
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </div>
             </div>
@@ -386,13 +414,27 @@ export function NewBookingForm({
               </p>
             ) : null}
 
+            {forceStations && slot ? (
+              <p className="rounded-lg border border-amber-400/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                A esa hora todas las estaciones de trabajo están ocupadas. Si
+                la agendas, habrá más citas que estaciones.
+              </p>
+            ) : null}
+
             <Button
               type="button"
               onClick={submit}
               disabled={pending || !slot}
-              className="w-full"
+              className={cn(
+                "w-full",
+                forceStations && slot && "bg-amber-600 text-white hover:bg-amber-600/90",
+              )}
             >
-              {pending ? "Creando…" : "Crear cita"}
+              {pending
+                ? "Creando…"
+                : forceStations && slot
+                  ? "Agendar de todos modos"
+                  : "Crear cita"}
             </Button>
           </div>
         </Section>

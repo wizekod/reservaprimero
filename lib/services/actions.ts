@@ -31,6 +31,7 @@ const serviceSchema = z.object({
     .int("Debe ser un número entero")
     .min(0, "No puede ser negativo")
     .max(240, "Máximo 240 minutos"),
+  uses_station: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
   image_path: z.preprocess(
     emptyToUndefined,
     z.string().trim().max(300).optional(),
@@ -52,6 +53,7 @@ function parse(formData: FormData) {
     duration_minutes: formData.get("duration_minutes"),
     price: formData.get("price"),
     buffer_minutes: formData.get("buffer_minutes"),
+    uses_station: formData.get("uses_station"),
     color: formData.get("color"),
     image_path: formData.get("image_path"),
   });
@@ -83,6 +85,7 @@ export async function createService(
     duration_minutes: d.duration_minutes,
     price: d.price,
     buffer_minutes: d.buffer_minutes,
+    uses_station: d.uses_station,
     color: d.color ?? null,
     image_path: imagen,
   });
@@ -131,6 +134,7 @@ export async function updateService(
       duration_minutes: d.duration_minutes,
       price: d.price,
       buffer_minutes: d.buffer_minutes,
+      uses_station: d.uses_station,
       color: d.color ?? null,
       image_path: imagen,
     })

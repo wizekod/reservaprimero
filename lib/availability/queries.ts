@@ -14,6 +14,8 @@ export type GetSlotsParams = {
   excludeAppointmentId?: string;
   /** Ver `ComputeInput.includeTaken`: sólo para mostrar, nunca para validar. */
   includeTaken?: boolean;
+  /** Ver `ComputeInput.markStationsFull`: sólo para el admin. */
+  markStationsFull?: boolean;
 };
 
 export type SlotsResult =
@@ -40,7 +42,7 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
     admin
       .from("businesses")
       .select(
-        "id, timezone, status, min_booking_notice_hours, max_booking_days, slot_interval_minutes",
+        "id, timezone, status, min_booking_notice_hours, max_booking_days, slot_interval_minutes, station_count",
       )
       .eq("slug", p.slug)
       .maybeSingle(),
@@ -62,7 +64,7 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
   const [{ data: service }, { data: staffRows }] = await Promise.all([
     admin
       .from("services")
-      .select("id, duration_minutes, buffer_minutes, active")
+      .select("id, duration_minutes, buffer_minutes, active, uses_station")
       .eq("id", p.serviceId)
       .eq("business_id", business.id)
       .maybeSingle(),
@@ -96,7 +98,22 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
     apptQuery = apptQuery.neq("id", p.excludeAppointmentId);
   }
 
-  const [{ data: rules }, { data: exceptions }, { data: appts }] =
+  // Estaciones: las citas de todo el negocio (no sólo de los candidatos)
+  // que ocupan una, con la limpieza de su propio servicio.
+  const withStations = business.station_count !== null && service.uses_station;
+  let stationQuery = admin
+    .from("appointments")
+    .select("id, start_at, end_at, services!inner ( buffer_minutes, uses_station )")
+    .eq("business_id", business.id)
+    .eq("status", "confirmed")
+    .eq("services.uses_station", true)
+    .gte("start_at", busyFrom.toISOString())
+    .lt("start_at", busyTo.toISOString());
+  if (p.excludeAppointmentId) {
+    stationQuery = stationQuery.neq("id", p.excludeAppointmentId);
+  }
+
+  const [{ data: rules }, { data: exceptions }, { data: appts }, { data: stationAppts }] =
     await Promise.all([
       admin
         .from("availability_rules")
@@ -109,11 +126,28 @@ export async function getSlots(p: GetSlotsParams): Promise<SlotsResult> {
         .gte("date", p.dateFrom)
         .lte("date", p.dateTo),
       apptQuery,
+      withStations ? stationQuery : Promise.resolve({ data: [] }),
     ]);
+
+  const pickOne = <T,>(v: T | T[] | null): T | null =>
+    Array.isArray(v) ? (v[0] ?? null) : v;
 
   const slots = computeAvailability({
     now: p.now ?? new Date(),
     includeTaken: p.includeTaken,
+    markStationsFull: p.markStationsFull,
+    stations: withStations
+      ? {
+          capacity: business.station_count!,
+          busy: (stationAppts ?? []).map((a) => ({
+            startAt: a.start_at,
+            endAt: new Date(
+              new Date(a.end_at).getTime() +
+                (pickOne(a.services)?.buffer_minutes ?? 0) * 60_000,
+            ).toISOString(),
+          })),
+        }
+      : null,
     timeZone: business.timezone,
     service: {
       durationMinutes: service.duration_minutes,

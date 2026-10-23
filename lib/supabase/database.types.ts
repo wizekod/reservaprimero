@@ -41,6 +41,7 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          station_override: boolean
           business_id: string
           cancel_token: string
           created_at: string
@@ -55,6 +56,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          station_override?: boolean
           business_id: string
           cancel_token?: string
           created_at?: string
@@ -69,6 +71,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          station_override?: boolean
           business_id?: string
           cancel_token?: string
           created_at?: string
@@ -195,6 +198,7 @@ export type Database = {
       }
       businesses: {
         Row: {
+          station_count: number | null
           address: string | null
           brand_color: string | null
           cancellation_notice_hours: number
@@ -220,6 +224,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          station_count?: number | null
           address?: string | null
           brand_color?: string | null
           cancellation_notice_hours?: number
@@ -245,6 +250,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          station_count?: number | null
           address?: string | null
           brand_color?: string | null
           cancellation_notice_hours?: number
@@ -548,6 +554,7 @@ export type Database = {
       }
       services: {
         Row: {
+          uses_station: boolean
           active: boolean
           buffer_minutes: number
           business_id: string
@@ -562,6 +569,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          uses_station?: boolean
           active?: boolean
           buffer_minutes?: number
           business_id: string
@@ -576,6 +584,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          uses_station?: boolean
           active?: boolean
           buffer_minutes?: number
           business_id?: string
@@ -788,6 +797,15 @@ export type Database = {
       is_superadmin: { Args: never; Returns: boolean }
       owns_media_path: { Args: { object_name: string }; Returns: boolean }
       phone_dial_code: { Args: { tz: string }; Returns: string }
+      stations_in_use: {
+        Args: {
+          p_business_id: string
+          p_end: string
+          p_exclude_id?: string
+          p_start: string
+        }
+        Returns: number
+      }
       revoke_user_sessions: { Args: { p_user_id: string }; Returns: undefined }
       upsert_customer: {
         Args: {

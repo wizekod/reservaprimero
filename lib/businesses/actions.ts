@@ -97,6 +97,16 @@ const updateSchema = z.object({
     .int()
     .min(0, "Entre 0 y 23")
     .max(23, "Entre 0 y 23"),
+  // Vacío = sin límite de estaciones.
+  station_count: z.preprocess(
+    emptyToUndefined,
+    z.coerce
+      .number()
+      .int("Número entero")
+      .min(1, "Al menos 1 (o déjalo vacío)")
+      .max(500, "Máximo 500")
+      .optional(),
+  ),
 });
 
 /** Alta de negocio: crea `businesses` + enlaza `profiles.business_id`. */
@@ -198,6 +208,7 @@ export async function updateBusinessSettings(
     cancellation_notice_hours: formData.get("cancellation_notice_hours"),
     notify_staff_on_booking: formData.get("notify_staff_on_booking"),
     staff_digest_hour: formData.get("staff_digest_hour"),
+    station_count: formData.get("station_count"),
   });
   if (!parsed.success) {
     return { fieldErrors: z.flattenError(parsed.error).fieldErrors };
@@ -237,6 +248,7 @@ export async function updateBusinessSettings(
       cancellation_notice_hours: d.cancellation_notice_hours,
       notify_staff_on_booking: d.notify_staff_on_booking,
       staff_digest_hour: d.staff_digest_hour,
+      station_count: d.station_count ?? null,
     })
     .eq("id", business.id);
 
@@ -271,7 +283,47 @@ export async function updateBusinessSettings(
 
   revalidatePath("/dashboard/configuracion");
   revalidatePath("/dashboard");
+
+  // Bajar el número no cancela nada: lo ya agendado se respeta. Pero se
+  // avisa, porque en esos horarios ya no entrará ninguna reserva más.
+  const nuevo = d.station_count ?? null;
+  if (nuevo !== null && nuevo !== business.station_count) {
+    const excedidos = await countStationOverflows(business.id, nuevo);
+    if (excedidos > 0) {
+      return {
+        message: `Cambios guardados. Ojo: ${excedidos} ${
+          excedidos === 1 ? "horario futuro ya tiene" : "horarios futuros ya tienen"
+        } más citas que estaciones. Esas citas se respetan, pero ahí no se aceptarán más reservas.`,
+      };
+    }
+  }
   return { message: "Cambios guardados." };
+}
+
+/** Horarios futuros (inicio de cita) con más citas a la vez que estaciones. */
+async function countStationOverflows(businessId: string, capacity: number): Promise<number> {
+  const { data } = await createAdminClient()
+    .from("appointments")
+    .select("start_at, end_at, services!inner ( buffer_minutes, uses_station )")
+    .eq("business_id", businessId)
+    .eq("status", "confirmed")
+    .eq("services.uses_station", true)
+    .gte("end_at", new Date().toISOString())
+    .limit(5000);
+
+  const busy = (data ?? []).map((a) => {
+    const svc = Array.isArray(a.services) ? a.services[0] : a.services;
+    return {
+      start: new Date(a.start_at).getTime(),
+      end: new Date(a.end_at).getTime() + (svc?.buffer_minutes ?? 0) * 60_000,
+    };
+  });
+  const horas = new Set<number>();
+  for (const a of busy) {
+    const enUso = busy.filter((b) => b.start <= a.start && b.end > a.start).length;
+    if (enUso > capacity) horas.add(a.start);
+  }
+  return horas.size;
 }
 
 /** Chequeo en vivo de disponibilidad de slug (llamado desde el formulario). */
