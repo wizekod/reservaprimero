@@ -615,7 +615,7 @@ export default async function Home() {
 
       {/* ───────────── Footer ───────────── */}
       <footer className="border-t border-border">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1fr_auto_auto]">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1fr_auto_auto_auto]">
           <div>
             <Logo />
             <p className="mt-3 text-sm text-muted-foreground">
@@ -633,6 +633,10 @@ export default async function Home() {
             <Link href="/registro" className="text-muted-foreground hover:text-foreground">Registrar mi negocio</Link>
             <Link href="/login" className="text-muted-foreground hover:text-foreground">Iniciar sesión</Link>
             <Link href="/recuperar" className="text-muted-foreground hover:text-foreground">Recuperar contraseña</Link>
+          </nav>
+          <nav className="grid content-start gap-2.5 text-sm">
+            <p className="font-semibold">Legal</p>
+            <Link href="/privacidad" className="text-muted-foreground hover:text-foreground">Aviso de privacidad</Link>
           </nav>
         </div>
       </footer>

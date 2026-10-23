@@ -588,6 +588,11 @@ export function BookingFlow({
                 >
                   {pending ? "Reservando…" : "Confirmar reserva"}
                 </Button>
+                <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                  {business.name} usará tus datos sólo para agendar tu cita y enviarte la
+                  confirmación y los recordatorios por correo o WhatsApp. Al confirmar aceptas
+                  el <PrivacyLink />.
+                </p>
               </Panel>
               <BackButton onClick={() => setStep("slot")} />
             </section>
@@ -619,11 +624,28 @@ export function BookingFlow({
                 </p>
                 <CopyLink url={result.manageUrl} />
               </Panel>
+
+              <p className="text-center text-xs text-muted-foreground">
+                Tus datos se tratan conforme a nuestro <PrivacyLink />.
+              </p>
             </section>
           ) : null}
         </div>
       </div>
     </div>
+  );
+}
+
+function PrivacyLink() {
+  return (
+    <a
+      href="/privacidad"
+      target="_blank"
+      rel="noopener"
+      className="font-medium underline underline-offset-2 hover:text-foreground"
+    >
+      Aviso de privacidad
+    </a>
   );
 }
 
