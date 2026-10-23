@@ -79,8 +79,10 @@ const cookieA = sessionCookie(sesionA);
 const json = async (res) => (res.ok ? res.json() : []);
 const setPerms = (perms) =>
   rest(`staff_members?id=eq.${smA.id}`, { method: "PATCH", body: JSON.stringify(perms) });
+// `select=id`: devolver la fila entera pediría también el teléfono, que con
+// la migración 20261023120100 ya no se lee de la tabla (la app pide sólo id).
 const patch = (who, path, body) =>
-  who(path, {
+  who(`${path}&select=id`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify(body),
@@ -149,7 +151,7 @@ try {
   await setPerms({ customers_scope: "all" });
   const todos = await json(await a("customer_contacts?select=id"));
   ok(todos.length === 3, `ve también al cliente sin citas (${todos.length})`);
-  const alta = await a("customers", {
+  const alta = await a("customers?select=id", {
     method: "POST",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({ business_id: biz.id, name: "NUEVO DESDE STAFF" }),
