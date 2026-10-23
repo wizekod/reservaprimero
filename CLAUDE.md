@@ -75,6 +75,8 @@ Tablas principales (nombres sugeridos, ajustables):
 
 **Estaciones de trabajo** (sillones, camillas, cabinas): `businesses.station_count` (null = sin límite) y `services.uses_station`. No hay más citas a la vez que estaciones entre los servicios que ocupan una, contando su limpieza (`buffer_minutes`). Lo aplica `computeAvailability` (horario sin estación = tachado en la página pública) y, como red de seguridad ante reservas simultáneas, el trigger `guard_station_capacity` (advisory lock por negocio, error `RP409`). El admin puede agendar por encima del límite desde Nueva reserva tras confirmar; queda marcado en `appointments.station_override`, que sólo escribe el servidor.
 
+**GRANTs en migraciones**: desde el 30-oct-2026 Supabase no da acceso automático por la Data API a tablas nuevas de `public`. Toda migración que cree una tabla o vista incluye sus `grant` explícitos para `service_role` (y `authenticated`/`anon` si aplica), junto con su RLS.
+
 **Prevención de doble-booking**: al crear una cita, validar server-side (no solo en UI) que no exista solapamiento para ese `staff_member_id` en ese rango de tiempo — usar un constraint de exclusión en Postgres (`EXCLUDE USING gist`) o una transacción con lock, no confiar solo en la validación del cliente.
 
 ## 6. Flujos clave
