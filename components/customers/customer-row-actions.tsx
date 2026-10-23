@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { deleteCustomer } from "@/lib/customers/actions";
 import { Button } from "@/components/ui/button";
 
+/** Eliminar ficha: sólo el admin del negocio (el staff nunca borra clientes). */
 export function CustomerRowActions({ id }: { id: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();

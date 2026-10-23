@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import { getMyBusinessAsAdmin } from "@/lib/businesses/queries";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getMyBusiness, getMyBusinessAsAdmin } from "@/lib/businesses/queries";
+import { getMyAccess, type PanelAccess } from "@/lib/staff/access";
+import type { BusinessRow } from "@/lib/supabase/database.types";
 import { getProfile } from "@/lib/auth/dal";
 import { phoneKey, phoneLengthError } from "@/lib/customers/phone";
 import { emptyToUndefined, type FormState } from "@/lib/forms";
@@ -51,12 +54,38 @@ function validarTelefono(
   return error ? { fieldErrors: { phone: [error] } } : null;
 }
 
+/**
+ * El admin, o un profesional con permiso para editar clientes. Quien llama
+ * escribe con su propia sesión, así que la RLS de `customers` (y el trigger
+ * que protege teléfono y correo) vuelve a decidir; esto sólo da un mensaje
+ * claro antes.
+ */
+async function editor(
+  needs: "create" | "update",
+): Promise<{ access: PanelAccess; business: BusinessRow } | null> {
+  const [access, business] = await Promise.all([getMyAccess(), getMyBusiness()]);
+  if (!access || !business || business.id !== access.businessId) return null;
+  const p = access.permissions;
+  if (!p.editCustomers) return null;
+  // Una ficha suelta, sin citas, sólo la puede abrir quien ve a todos.
+  if (needs === "create" && p.customersScope !== "all") return null;
+  return { access, business };
+}
+
+function revalidateCustomers(id?: string) {
+  for (const base of ["/dashboard/clientes", "/staff/clientes"]) {
+    revalidatePath(base);
+    if (id) revalidatePath(`${base}/${id}`);
+  }
+}
+
 export async function createCustomer(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusinessAsAdmin();
-  if (!business) return { error: "No autorizado." };
+  const auth = await editor("create");
+  if (!auth) return { error: "No autorizado." };
+  const { business, access } = auth;
 
   const parsed = parse(formData);
   if (!parsed.success) {
@@ -84,16 +113,20 @@ export async function createCustomer(
     return { error: "No se pudo crear el cliente." };
   }
 
-  revalidatePath("/dashboard/clientes");
-  redirect(`/dashboard/clientes/${data.id}`);
+  revalidateCustomers();
+  redirect(`${access.paths.customers}/${data.id}`);
 }
 
 export async function updateCustomer(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const business = await getMyBusinessAsAdmin();
-  if (!business) return { error: "No autorizado." };
+  const auth = await editor("update");
+  if (!auth) return { error: "No autorizado." };
+  const { business, access } = auth;
+  // Sin permiso de contacto el formulario no lleva teléfono ni correo: se
+  // cambia sólo el nombre, sin borrar lo que no ve.
+  const withContact = access.permissions.seeCustomerContact;
 
   const id = formData.get("id");
   if (typeof id !== "string" || !id) return { error: "Cliente no encontrado." };
@@ -104,27 +137,33 @@ export async function updateCustomer(
   }
   const d = parsed.data;
 
-  const malTelefono = validarTelefono(d.phone, business.phone_country_code);
-  if (malTelefono) return malTelefono;
+  if (withContact) {
+    const malTelefono = validarTelefono(d.phone, business.phone_country_code);
+    if (malTelefono) return malTelefono;
+  }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("customers")
-    .update({
-      name: d.name,
-      phone: d.phone ?? null,
-      email: d.email ?? null,
-    })
+    .update(
+      withContact
+        ? { name: d.name, phone: d.phone ?? null, email: d.email ?? null }
+        : { name: d.name },
+    )
     .eq("id", id)
-    .eq("business_id", business.id);
+    .eq("business_id", business.id)
+    .select("id");
 
   if (error) {
     if (error.code === "23505") return { fieldErrors: { phone: [DUPLICADO] } };
     return { error: "No se pudieron guardar los cambios." };
   }
+  // La RLS no da error al no dejar editar: simplemente no actualiza nada.
+  if ((updated ?? []).length === 0) {
+    return { error: "No tienes permiso para editar este cliente." };
+  }
 
-  revalidatePath("/dashboard/clientes");
-  revalidatePath(`/dashboard/clientes/${id}`);
+  revalidateCustomers(id);
   return { message: "Cambios guardados." };
 }
 
@@ -150,7 +189,7 @@ export async function deleteCustomer(
     return { ok: false, error: "No se pudo eliminar." };
   }
 
-  revalidatePath("/dashboard/clientes");
+  revalidateCustomers();
   return { ok: true };
 }
 
@@ -162,14 +201,20 @@ export async function deleteCustomer(
 export async function lookupCustomerByPhone(phone: string): Promise<
   { found: false } | { found: true; id: string; name: string; email: string | null }
 > {
-  const business = await getMyBusinessAsAdmin();
-  if (!business) return { found: false };
+  // Quien puede crear citas desde el panel: el admin o un profesional con ese
+  // permiso. Se lee con service_role porque un profesional que sólo ve sus
+  // clientes también tiene que reconocer a uno que vuelve con otro compañero.
+  // Ya conoce el teléfono (lo acaba de escribir); el correo sólo se devuelve
+  // si tiene permiso de contacto.
+  const [access, business] = await Promise.all([getMyAccess(), getMyBusiness()]);
+  if (!access || !business || business.id !== access.businessId) return { found: false };
+  if (access.permissions.bookingScope === "none") return { found: false };
 
   const key = phoneKey(phone, business.phone_country_code);
   if (!key) return { found: false };
 
-  const supabase = await createClient();
-  const { data } = await supabase
+  const admin = createAdminClient();
+  const { data } = await admin
     .from("customers")
     .select("id, name, email")
     .eq("business_id", business.id)
@@ -177,7 +222,12 @@ export async function lookupCustomerByPhone(phone: string): Promise<
     .maybeSingle();
 
   if (!data) return { found: false };
-  return { found: true, id: data.id, name: data.name, email: data.email };
+  return {
+    found: true,
+    id: data.id,
+    name: data.name,
+    email: access.permissions.seeCustomerContact ? data.email : null,
+  };
 }
 
 // ── Historia clínica ───────────────────────────────────────────────────────

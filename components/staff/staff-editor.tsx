@@ -16,6 +16,8 @@ import { STAFF_COLORS } from "@/lib/staff/palette";
 import { cn } from "@/lib/utils";
 import { ImageField } from "@/components/media/image-field";
 import { StaffAccessCard } from "@/components/staff/staff-access-card";
+import { StaffPermissionsCard } from "@/components/staff/staff-permissions-card";
+import { permissionsFromRow } from "@/lib/staff/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -210,11 +212,18 @@ export function StaffEditor({
           </CardHeader>
         </Card>
       ) : (
-        <StaffAccessCard
-          staffId={staff.id}
-          status={staff.status}
-          currentEmail={loginEmail ?? staff.invited_email}
-        />
+        <>
+          <StaffAccessCard
+            staffId={staff.id}
+            status={staff.status}
+            currentEmail={loginEmail ?? staff.invited_email}
+          />
+          <StaffPermissionsCard
+            staffId={staff.id}
+            status={staff.status}
+            initial={permissionsFromRow(staff)}
+          />
+        </>
       )}
 
       <Card>

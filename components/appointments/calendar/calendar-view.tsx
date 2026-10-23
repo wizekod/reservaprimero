@@ -116,6 +116,9 @@ export function CalendarView({
   staff,
   rangeLabel,
   monthAnchor,
+  ownStaffId,
+  manageAll,
+  customers,
 }: {
   basePath: string;
   view: CalendarView;
@@ -127,6 +130,12 @@ export function CalendarView({
   staff: StaffOption[];
   rangeLabel: string;
   monthAnchor: string;
+  /** Ficha de profesional de quien mira (sus citas siempre las gestiona). */
+  ownStaffId: string | null;
+  /** Puede cambiar el estado de citas de otros. */
+  manageAll: boolean;
+  /** Enlace a la ficha del cliente; `ownOnly` = sólo en sus propias citas. */
+  customers: { href: string; ownOnly: boolean } | null;
 }) {
   const router = useRouter();
   const [staffId, setStaffId] = useState<string>("all");
@@ -406,8 +415,12 @@ export function CalendarView({
           appt={selected}
           timeZone={timeZone}
           customerHref={
-            basePath.startsWith("/dashboard") ? "/dashboard/clientes" : null
+            customers &&
+            (!customers.ownOnly || selected.staffMemberId === ownStaffId)
+              ? customers.href
+              : null
           }
+          canManage={manageAll || selected.staffMemberId === ownStaffId}
           onClose={() => setSelectedId(null)}
         />
       ) : null}
@@ -565,11 +578,13 @@ function DetailSheet({
   appt,
   timeZone,
   customerHref,
+  canManage,
   onClose,
 }: {
   appt: AgendaAppointment;
   timeZone: string;
   customerHref: string | null;
+  canManage: boolean;
   onClose: () => void;
 }) {
   const when = capitalizeFirst(
@@ -608,8 +623,7 @@ function DetailSheet({
           <Row
             label="Cliente"
             value={
-              // Sólo el panel del negocio tiene ficha de cliente; el de staff
-              // reusa este mismo calendario y no debe enlazar ahí.
+              // Sólo enlaza a la ficha si quien mira tiene acceso a Clientes.
               customerHref && appt.customerId ? (
                 <Link
                   href={`${customerHref}/${appt.customerId}`}
@@ -643,9 +657,15 @@ function DetailSheet({
           {appt.notes ? <Row label="Nota" value={appt.notes} /> : null}
         </dl>
 
-        <div className="mt-4 border-t border-border pt-3">
-          <AppointmentActions id={appt.id} status={appt.status} />
-        </div>
+        {canManage ? (
+          <div className="mt-4 border-t border-border pt-3">
+            <AppointmentActions id={appt.id} status={appt.status} />
+          </div>
+        ) : (
+          <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+            Es una cita de otro profesional: solo puedes verla.
+          </p>
+        )}
       </div>
     </div>
   );

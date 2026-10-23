@@ -7,7 +7,7 @@
  */
 export const LEGAL = {
   /** Quien opera ReservaPrimero. */
-  controller: "José Carlos García",
+  controller: "Reserva Primero",
   /** Domicilio para oír y recibir notificaciones. Vacío = no se muestra. */
   address: "",
   /** Correo para derechos ARCO y dudas de privacidad. */

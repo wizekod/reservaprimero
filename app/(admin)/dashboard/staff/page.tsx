@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { listStaff, type StaffStatus } from "@/lib/staff/queries";
+import { getProfile } from "@/lib/auth/dal";
 import { buttonVariants } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { mediaUrl } from "@/lib/storage/media";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { StaffRowActions } from "@/components/staff/staff-row-actions";
+import { permissionsFromRow, permissionsSummary } from "@/lib/staff/permissions";
 
 export const metadata: Metadata = { title: "Staff · ReservaPrimero" };
 
@@ -22,7 +24,7 @@ export default async function StaffPage({
 }: {
   searchParams: Promise<{ aviso?: string }>;
 }) {
-  const [{ aviso }, staff] = await Promise.all([searchParams, listStaff()]);
+  const [{ aviso }, staff, me] = await Promise.all([searchParams, listStaff(), getProfile()]);
   const inviteWarning = aviso?.startsWith("invitacion:")
     ? aviso.slice("invitacion:".length)
     : null;
@@ -91,6 +93,15 @@ export default async function StaffPage({
                     {m.invited_email ? ` · ${m.invited_email}` : ""}
                     {` · ${m.service_ids.length} servicio${m.service_ids.length === 1 ? "" : "s"}`}
                   </p>
+                  {/* El dueño que también atiende ya lo puede todo. */}
+                  {m.status !== "no_login" && m.profile_id !== me?.id ? (
+                    <Link
+                      href={`/dashboard/staff/${m.id}#permisos`}
+                      className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Permisos: {permissionsSummary(permissionsFromRow(m))}
+                    </Link>
+                  ) : null}
                 </div>
               </div>
               <div className="flex items-center gap-1">

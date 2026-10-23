@@ -7,7 +7,8 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
-import { getMyBusiness, getMyBusinessAsAdmin } from "@/lib/businesses/queries";
+import { getMyBusiness } from "@/lib/businesses/queries";
+import { getMyAccess } from "@/lib/staff/access";
 import { upsertCustomer } from "@/lib/customers/upsert";
 import { phoneLengthError } from "@/lib/customers/phone";
 import { APPOINTMENT_STATUSES } from "@/lib/appointments/status";
@@ -51,12 +52,19 @@ export async function updateAppointmentStatus(
   if (!current) return { ok: false, error: "Cita no encontrada." };
   if (current.status === next) return { ok: true };
 
-  const { error } = await supabase
+  // Un profesional puede ver citas de otros (permiso de agenda completa) sin
+  // poder tocarlas: la RLS no da error, sólo no actualiza nada. Por eso se
+  // pide la fila de vuelta y se comprueba que llegó.
+  const { data: updated, error } = await supabase
     .from("appointments")
     .update({ status: next })
     .eq("id", id)
-    .eq("business_id", business.id);
+    .eq("business_id", business.id)
+    .select("id");
 
+  if (!error && (updated ?? []).length === 0) {
+    return { ok: false, error: "No tienes permiso para cambiar esta cita." };
+  }
   if (error) {
     if (error.code === "23P01") {
       return {
@@ -98,18 +106,24 @@ export type AdminBookingResult =
   | { ok: true; date: string };
 
 /**
- * El admin crea una cita a mano. Revalida el hueco server-side igual que la
+ * Alta manual de una cita desde el panel: el admin, o un profesional con
+ * permiso para crear citas. Revalida el hueco server-side igual que la
  * reserva pública, pero sin Turnstile / rate limit / límite de plan, y la cita
  * nace `confirmed`.
  */
-export async function createAppointmentAsAdmin(
+export async function createAppointmentFromPanel(
   raw: AdminBookingInput,
 ): Promise<AdminBookingResult> {
-  // Admin, no `getMyBusiness()`: esto escribe con el cliente service_role y
-  // puede elegir cualquier profesional del negocio, así que un staff no debe
-  // poder invocarlo para llenarle la agenda a un compañero.
-  const business = await getMyBusinessAsAdmin();
-  if (!business) return { ok: false, error: "No autorizado." };
+  // Esto escribe con el cliente service_role, que salta la RLS: la
+  // autorización es ésta. Un profesional con permiso "sólo para sí" no puede
+  // llenarle la agenda a un compañero invocando la acción directamente.
+  const access = await getMyAccess();
+  const business = await getMyBusiness();
+  if (!access || !business || business.id !== access.businessId) {
+    return { ok: false, error: "No autorizado." };
+  }
+  const scope = access.permissions.bookingScope;
+  if (scope === "none") return { ok: false, error: "No autorizado." };
 
   const parsed = adminBookingSchema.safeParse(raw);
   if (!parsed.success) {
@@ -120,6 +134,10 @@ export async function createAppointmentAsAdmin(
     };
   }
   const b = parsed.data;
+
+  if (scope === "own" && b.staffMemberId !== access.staffMemberId) {
+    return { ok: false, error: "Solo puedes crear citas en tu propia agenda." };
+  }
 
   const malTelefono = phoneLengthError(b.phone, business.phone_country_code);
   if (malTelefono) {
@@ -201,5 +219,6 @@ export async function createAppointmentAsAdmin(
 
   after(() => notifyBookingConfirmed(appointment.id));
   revalidatePath("/dashboard/calendario");
+  revalidatePath("/staff");
   return { ok: true, date };
 }

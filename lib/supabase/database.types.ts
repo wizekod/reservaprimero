@@ -98,6 +98,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customer_contacts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -596,9 +603,15 @@ export type Database = {
         Row: {
           active: boolean
           avatar_path: string | null
+          booking_scope: string
           business_id: string
+          can_edit_customers: boolean
+          can_manage_all_appointments: boolean
+          can_see_customer_contact: boolean
+          can_view_all_appointments: boolean
           color: string | null
           created_at: string
+          customers_scope: string
           display_name: string
           id: string
           invited_email: string | null
@@ -608,9 +621,15 @@ export type Database = {
         Insert: {
           active?: boolean
           avatar_path?: string | null
+          booking_scope?: string
           business_id: string
+          can_edit_customers?: boolean
+          can_manage_all_appointments?: boolean
+          can_see_customer_contact?: boolean
+          can_view_all_appointments?: boolean
           color?: string | null
           created_at?: string
+          customers_scope?: string
           display_name: string
           id?: string
           invited_email?: string | null
@@ -620,9 +639,15 @@ export type Database = {
         Update: {
           active?: boolean
           avatar_path?: string | null
+          booking_scope?: string
           business_id?: string
+          can_edit_customers?: boolean
+          can_manage_all_appointments?: boolean
+          can_see_customer_contact?: boolean
+          can_view_all_appointments?: boolean
           color?: string | null
           created_at?: string
+          customers_scope?: string
           display_name?: string
           id?: string
           invited_email?: string | null
@@ -708,9 +733,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      customer_contacts: {
+        Row: {
+          business_id: string
+          created_at: string
+          email: string | null
+          id: string
+          is_mine: boolean
+          name: string
+          phone: string | null
+          phone_key: string | null
+          phone_last4: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      can_read_customer: {
+        Args: { p_business_id: string; p_customer_id: string }
+        Returns: boolean
+      }
+      can_see_customer_contact: {
+        Args: { p_business_id: string }
+        Returns: boolean
+      }
       can_write_staff_service: {
         Args: { p_service_id: string; p_staff_member_id: string }
         Returns: boolean
@@ -725,6 +779,7 @@ export type Database = {
         Args: { dial: string; raw: string }
         Returns: string
       }
+      is_my_customer: { Args: { p_customer_id: string }; Returns: boolean }
       is_business_admin: {
         Args: { target_business_id: string }
         Returns: boolean

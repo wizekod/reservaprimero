@@ -5,7 +5,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import type { FormState } from "@/lib/forms";
-import type { CustomerRow } from "@/lib/supabase/database.types";
+import type { CustomerContact } from "@/lib/customers/queries";
+import { maskedPhone } from "@/lib/staff/permissions";
 import { expectedPhoneDigits } from "@/lib/customers/phone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +35,18 @@ export function CustomerForm({
   dialCode,
   title,
   submitLabel,
+  backHref = "/dashboard/clientes",
+  contactEditable = true,
 }: {
   action: CustomerAction;
-  customer?: CustomerRow;
+  customer?: CustomerContact;
+  /** Lista de clientes del panel desde el que se edita. */
+  backHref?: string;
+  /**
+   * Un profesional sin permiso de contacto edita sólo el nombre: no ve el
+   * teléfono ni el correo, así que tampoco los toca.
+   */
+  contactEditable?: boolean;
   /** Prefijo del país del negocio: fija cuántos dígitos se esperan. */
   dialCode: string | null;
   title: string;
@@ -78,41 +88,50 @@ export function CustomerForm({
             </p>
           ) : null}
 
-          <div className="grid gap-2">
-            <Label htmlFor="phone">Teléfono</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              inputMode="tel"
-              value={form.phone}
-              onChange={(e) => set("phone")(e.target.value)}
-              maxLength={30}
-            />
-            {digitos ? (
-              <p className="text-xs text-muted-foreground">
-                {digitos} dígitos.
-              </p>
-            ) : null}
-            {customer?.phone_key ? (
-              <p className="text-xs text-muted-foreground">
-                Se reconoce como{" "}
-                <span className="font-medium tabular-nums">
-                  {customer.phone_key}
-                </span>{" "}
-                ·{" "}
-                <a
-                  href={`https://wa.me/${customer.phone_key.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline underline-offset-4"
-                >
-                  escribir por WhatsApp
-                </a>
-              </p>
-            ) : null}
-            <FieldError messages={state.fieldErrors?.phone} />
-          </div>
+          {!contactEditable && customer ? (
+            <div className="grid gap-1">
+              <span className="text-sm font-medium">Teléfono</span>
+              <span className="text-sm tabular-nums text-muted-foreground">
+                {maskedPhone(customer.phone_last4) ?? "Sin teléfono"} · oculto
+              </span>
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Teléfono</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                value={form.phone}
+                onChange={(e) => set("phone")(e.target.value)}
+                maxLength={30}
+              />
+              {digitos ? (
+                <p className="text-xs text-muted-foreground">
+                  {digitos} dígitos.
+                </p>
+              ) : null}
+              {customer?.phone_key ? (
+                <p className="text-xs text-muted-foreground">
+                  Se reconoce como{" "}
+                  <span className="font-medium tabular-nums">
+                    {customer.phone_key}
+                  </span>{" "}
+                  ·{" "}
+                  <a
+                    href={`https://wa.me/${customer.phone_key.replace(/\D/g, "")}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-4"
+                  >
+                    escribir por WhatsApp
+                  </a>
+                </p>
+              ) : null}
+              <FieldError messages={state.fieldErrors?.phone} />
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="name">Nombre</Label>
@@ -128,21 +147,23 @@ export function CustomerForm({
             <FieldError messages={state.fieldErrors?.name} />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="email">Correo</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={(e) => set("email")(e.target.value)}
-            />
-            <FieldError messages={state.fieldErrors?.email} />
-          </div>
+          {!contactEditable && customer ? null : (
+            <div className="grid gap-2">
+              <Label htmlFor="email">Correo</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email")(e.target.value)}
+              />
+              <FieldError messages={state.fieldErrors?.email} />
+            </div>
+          )}
         </CardContent>
         <CardFooter className="justify-between gap-3">
           <Link
-            href="/dashboard/clientes"
+            href={backHref}
             className="text-sm text-muted-foreground underline underline-offset-4"
           >
             ← Clientes

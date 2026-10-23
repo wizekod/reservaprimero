@@ -1,4 +1,5 @@
 import { getMyBusiness } from "@/lib/businesses/queries";
+import { getMyAccess } from "@/lib/staff/access";
 import {
   listAppointments,
   listStaffOptions,
@@ -28,7 +29,8 @@ function daysInMonth(monthFirst: string): number {
 
 /**
  * Calendario de citas compartido por el panel admin (`/dashboard/calendario`)
- * y el de staff (`/staff`). El alcance de los datos lo decide RLS.
+ * y el de staff (`/staff`). El alcance de los datos lo decide la RLS según
+ * los permisos de cada profesional; aquí sólo se decide qué botones salen.
  */
 export async function Calendar({
   basePath,
@@ -81,10 +83,13 @@ export async function Calendar({
     tz,
   ).toISOString();
 
-  const [appointments, staff] = await Promise.all([
+  const [appointments, staff, access] = await Promise.all([
     listAppointments(fromISO, toISO),
     listStaffOptions(),
+    getMyAccess(),
   ]);
+  if (!access) return null;
+  const p = access.permissions;
 
   return (
     <CalendarView
@@ -98,6 +103,13 @@ export async function Calendar({
       staff={staff}
       rangeLabel={rangeLabel}
       monthAnchor={monthAnchor}
+      ownStaffId={access.staffMemberId}
+      manageAll={p.manageAllAppointments}
+      customers={
+        p.customersScope === "none"
+          ? null
+          : { href: access.paths.customers, ownOnly: p.customersScope === "own" }
+      }
     />
   );
 }

@@ -11,7 +11,13 @@ import { Input } from "@/components/ui/input";
  * Server Component vuelva a consultar: así el resultado es compartible y
  * sobrevive a un refresco.
  */
-export function CustomerSearch({ initial }: { initial: string }) {
+export function CustomerSearch({
+  initial,
+  placeholder = "Buscar por nombre o teléfono…",
+}: {
+  initial: string;
+  placeholder?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,7 +37,7 @@ export function CustomerSearch({ initial }: { initial: string }) {
         type="search"
         defaultValue={initial}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Buscar por nombre o teléfono…"
+        placeholder={placeholder}
         aria-label="Buscar clientes"
         className="pl-9"
       />

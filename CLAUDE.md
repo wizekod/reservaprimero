@@ -42,8 +42,10 @@ Multi-tenancy **por path**, no por subdominio: `reservaprimero.com/{slug}`.
 |---|---|---|
 | **Superadmin** | Global | Carlos. Ve/gestiona todos los negocios, planes, suscripciones, métricas de la plataforma. Puede suspender/activar cuentas. |
 | **Admin de negocio** | Su negocio | Dueño/gerente del negocio. CRUD de servicios, staff, horarios, configuración del negocio, ve todas las citas de su negocio, gestiona su suscripción (Billing Portal). |
-| **Staff** | Sus propias citas | Miembro del equipo. Ve y gestiona únicamente las citas asignadas a él/ella, puede marcar no-show/cancelada. |
+| **Staff** | Sus propias citas (+ permisos) | Miembro del equipo. Por defecto ve y gestiona únicamente las citas asignadas a él/ella (puede marcar no-show/cancelada). El admin le amplía el acceso con permisos por persona (ver abajo). |
 | **Cliente final (público)** | Sin cuenta | Accede al link público, agenda sin login. Recibe confirmación y recordatorios. Puede cancelar/reagendar vía link con token (sin password). |
+
+**Permisos del staff** (columnas de `staff_members`, ficha de cada profesional → "Permisos", con plantillas Básico / Profesional / Recepción): ver la agenda de todo el equipo, crear citas (no / sólo para sí / cualquiera), cambiar estado de citas de otros, sección Clientes (no / los suyos / todos), crear y editar clientes, ver teléfono y correo. Se aplican en la RLS (`current_staff()`, `can_read_customer()`); el teléfono y el correo sólo se leen por la vista `customer_contacts`, que los oculta sin permiso. Borrar clientes, historia clínica, configuración, servicios, staff y suscripción siguen siendo sólo del admin.
 
 Tabla `profiles` (extiende `auth.users` de Supabase) con columna `role` (`superadmin` | `business_admin` | `staff`) + relación a `business_id` cuando aplique (un usuario admin/staff pertenece a un negocio; superadmin no pertenece a ninguno).
 
@@ -246,7 +248,7 @@ CRON_SECRET=
 - [X] Página pública de reserva `/[slug]` — flujo completo + `createBooking` server-side (revalidación, find-or-create customer, cancel_token, `auto_confirm_bookings`, rate limit, Turnstile, notificaciones, límite plan Free).
 - [X] Cancelación/reagendado vía token sin login — `/reservas/[token]`: ver / cancelar / reagendar respetando `cancellation_notice_hours`; el `cancel_token` rota al reagendar.
 - [X] Dashboard admin de negocio — sidebar responsivo (cajón en móvil) con: Inicio · Nueva Reserva · Calendario (rejilla horaria día/semana + mes) · Estadísticas · Servicios · Staff · Bloquear horario · Mi suscripción · Configuración. Sin MercadoPago/Extras/Transferencias por decisión de Carlos.
-- [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar no asistió o cancelada.
+- [X] Dashboard staff (solo sus citas) — `/staff` reusa la agenda (día/semana); RLS limita a las citas del propio staff, que puede marcar no asistió o cancelada. Con permisos del admin: agenda del equipo, `/staff/nueva-reserva`, `/staff/clientes` (mismas pantallas que el admin).
 - [X] Dashboard superadmin (negocios, activar/suspender, planes) — `/superadmin` (métricas + tabla de negocios + suspender/reactivar + borrar: sólo suspendidos, escribiendo el slug; cancela Stripe, borra imágenes, datos en cascada y las cuentas de dueño y staff) y `/superadmin/planes` (editar planes). MRR vía Stripe queda para el bloque de Stripe.
 - [~] Integración email (Resend) — confirmación + recordatorios — código completo en modo protegido (no-op sin `RESEND_API_KEY`); enganchado a reserva/confirmación/cancelación/reagendado/recordatorio. Falta pegar credenciales.
 - [~] Integración WhatsApp (Meta Cloud API) — confirmación + reagendado + recordatorios + cancelación con plantillas — código completo en modo protegido; solo se envía si el plan incluye la feature. Falta alta en Meta, token permanente y aprobar las 4 plantillas (DEPLOY.md §6).

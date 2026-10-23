@@ -2,12 +2,25 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { getMyBusiness } from "@/lib/businesses/queries";
-import type { AppointmentStatus, CustomerNoteRow, CustomerRow } from "@/lib/supabase/database.types";
+import { getMyAccess } from "@/lib/staff/access";
+import type { AppointmentStatus, CustomerNoteRow } from "@/lib/supabase/database.types";
 
-export type CustomerListRow = Pick<
-  CustomerRow,
-  "id" | "name" | "phone" | "phone_key" | "email" | "created_at"
->;
+/**
+ * Ficha de cliente tal como la puede ver quien consulta. Sale de la vista
+ * `customer_contacts`: teléfono y correo llegan en null si es un profesional
+ * sin permiso de contacto (con `phone_last4` para reconocerlo igualmente).
+ */
+export type CustomerContact = {
+  id: string;
+  name: string;
+  phone: string | null;
+  phone_key: string | null;
+  email: string | null;
+  phone_last4: string | null;
+  created_at: string;
+};
+
+const CONTACT_COLUMNS = "id, name, phone, phone_key, email, phone_last4, created_at";
 
 /**
  * PostgREST interpreta `,` `.` `(` `)` `"` y `\` dentro de los filtros, y
@@ -22,15 +35,26 @@ function safeTerm(raw: string): string {
     .slice(0, 40);
 }
 
-export async function listCustomers(q?: string): Promise<CustomerListRow[]> {
+/** "Solo los suyos": los que han tenido cita con este profesional. */
+async function onlyMine(): Promise<boolean> {
+  const access = await getMyAccess();
+  return access?.permissions.customersScope === "own";
+}
+
+export async function listCustomers(q?: string): Promise<CustomerContact[]> {
   const business = await getMyBusiness();
   if (!business) return [];
 
   const supabase = await createClient();
   let query = supabase
-    .from("customers")
-    .select("id, name, phone, phone_key, email, created_at")
+    .from("customer_contacts")
+    .select(CONTACT_COLUMNS)
     .eq("business_id", business.id);
+
+  // La RLS le deja leer también a los clientes de las citas de sus
+  // compañeros (si ve la agenda completa, necesita sus nombres); la sección
+  // Clientes con alcance "los suyos" no los lista.
+  if (await onlyMine()) query = query.eq("is_mine", true);
 
   const raw = (q ?? "").trim();
   if (raw.length >= 2) {
@@ -48,17 +72,19 @@ export async function listCustomers(q?: string): Promise<CustomerListRow[]> {
   return data ?? [];
 }
 
-export async function getCustomer(id: string): Promise<CustomerRow | null> {
+export async function getCustomer(id: string): Promise<CustomerContact | null> {
   const business = await getMyBusiness();
   if (!business) return null;
 
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("customers")
-    .select("*")
+  let query = supabase
+    .from("customer_contacts")
+    .select(CONTACT_COLUMNS)
     .eq("id", id)
-    .eq("business_id", business.id)
-    .maybeSingle();
+    .eq("business_id", business.id);
+  if (await onlyMine()) query = query.eq("is_mine", true);
+
+  const { data } = await query.maybeSingle();
   return data;
 }
 

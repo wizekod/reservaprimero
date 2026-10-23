@@ -3,7 +3,8 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { AppointmentStatus } from "@/lib/supabase/database.types";
 import { getMyBusiness } from "@/lib/businesses/queries";
-import { getProfile } from "@/lib/auth/dal";
+import { getMyAccess } from "@/lib/staff/access";
+import { maskedPhone } from "@/lib/staff/permissions";
 
 export type AgendaAppointment = {
   id: string;
@@ -20,6 +21,7 @@ export type AgendaAppointment = {
   staffAvatarPath: string | null;
   customerId: string;
   customerName: string;
+  /** Completo, o `•••• 1234` si quien mira no tiene permiso de contacto. */
   customerPhone: string | null;
 };
 
@@ -41,7 +43,7 @@ export async function listAppointments(
       `id, status, start_at, end_at, notes, staff_member_id,
        services ( name, color, price ),
        staff_members ( display_name, color, avatar_path ),
-       customers ( id, name, phone )`,
+       customer_contacts ( id, name, phone, phone_last4 )`,
     )
     .eq("business_id", business.id)
     .gte("start_at", fromISO)
@@ -51,7 +53,9 @@ export async function listAppointments(
   return (data ?? []).map((row) => {
     const service = pick(row.services);
     const staff = pick(row.staff_members);
-    const customer = pick(row.customers);
+    // El teléfono sale de la vista de contactos, que lo deja en null a quien
+    // no tiene permiso; los 4 últimos dígitos sí llegan.
+    const customer = pick(row.customer_contacts);
     return {
       id: row.id,
       status: row.status,
@@ -67,7 +71,7 @@ export async function listAppointments(
       staffAvatarPath: staff?.avatar_path ?? null,
       customerId: customer?.id ?? "",
       customerName: customer?.name ?? "—",
-      customerPhone: customer?.phone ?? null,
+      customerPhone: customer?.phone ?? maskedPhone(customer?.phone_last4 ?? null),
     };
   });
 }
@@ -91,13 +95,13 @@ export async function listStaffOptions(): Promise<StaffOption[]> {
     .eq("business_id", business.id)
     .eq("active", true);
 
-  // Un miembro del staff sólo tiene sus propias citas, así que un filtro por
-  // profesional no le sirve de nada y sólo le enseña la plantilla del negocio.
-  // La RLS no lo recorta porque `staff_members` es de lectura pública (la
-  // página de reservas necesita listar a los profesionales).
-  const profile = await getProfile();
-  if (profile?.role === "staff") {
-    query = query.eq("profile_id", profile.id);
+  // Un miembro del staff que sólo ve sus citas no necesita filtro por
+  // profesional, y así no se le enseña la plantilla del negocio. La RLS no lo
+  // recorta porque `staff_members` es de lectura pública (la página de
+  // reservas necesita listar a los profesionales).
+  const access = await getMyAccess();
+  if (access?.role === "staff" && !access.permissions.viewAllAppointments) {
+    query = query.eq("id", access.staffMemberId ?? "");
   }
 
   const { data } = await query.order("display_name");

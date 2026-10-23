@@ -9,7 +9,7 @@ import {
   getBookableStaff,
   type BookableStaff,
 } from "@/lib/booking/actions";
-import { createAppointmentAsAdmin } from "@/lib/appointments/actions";
+import { createAppointmentFromPanel } from "@/lib/appointments/actions";
 import { lookupCustomerByPhone } from "@/lib/customers/actions";
 import type { PublicService } from "@/lib/booking/queries";
 import {
@@ -34,12 +34,18 @@ export function NewBookingForm({
   minDate,
   maxDate,
   dialCode,
+  agendaPath,
+  onlyStaffId = null,
 }: {
   slug: string;
   services: PublicService[];
   minDate: string;
   maxDate: string;
   dialCode: string | null;
+  /** A dónde volver tras crear la cita (calendario del admin o del staff). */
+  agendaPath: string;
+  /** Profesional con permiso "sólo para sí": su agenda y ninguna otra. */
+  onlyStaffId?: string | null;
 }) {
   const digitos = expectedPhoneDigits(dialCode);
   const router = useRouter();
@@ -105,7 +111,15 @@ export function NewBookingForm({
     setPorDia(new Map());
     setMesCargado(null);
     startTransition(async () => {
-      setStaffList(id ? await getBookableStaff(slug, id) : []);
+      const list = id ? await getBookableStaff(slug, id) : [];
+      // El servidor vuelve a comprobarlo al crear la cita; esto sólo evita
+      // ofrecer lo que luego se rechazaría.
+      const mine = onlyStaffId ? list.filter((m) => m.id === onlyStaffId) : list;
+      setStaffList(mine);
+      if (onlyStaffId && mine.length > 0) {
+        setStaffId(onlyStaffId);
+        loadMonth(month, onlyStaffId, id);
+      }
     });
   }
 
@@ -168,7 +182,7 @@ export function NewBookingForm({
       return;
     }
     startTransition(async () => {
-      const res = await createAppointmentAsAdmin({
+      const res = await createAppointmentFromPanel({
         serviceId: service.id,
         staffMemberId: slot.staffMemberId,
         startISO: slot.start,
@@ -179,7 +193,7 @@ export function NewBookingForm({
       });
       if (res.ok) {
         toast.success("Cita creada.");
-        router.push(`/dashboard/calendario?d=${res.date}&v=dia`);
+        router.push(`${agendaPath}?d=${res.date}&v=dia`);
       } else {
         setFormError(res.error);
         if (res.fieldErrors) setErrors(res.fieldErrors);
@@ -240,9 +254,11 @@ export function NewBookingForm({
         {serviceId ? (
           <Section title="2 · Profesional">
             <div className="flex flex-wrap gap-2">
-              <Chip active={staffId === null && slotsLoaded} onClick={() => pickStaff(null)}>
-                Cualquiera
-              </Chip>
+              {onlyStaffId ? null : (
+                <Chip active={staffId === null && slotsLoaded} onClick={() => pickStaff(null)}>
+                  Cualquiera
+                </Chip>
+              )}
               {staffList.map((m) => (
                 <Chip
                   key={m.id}
@@ -255,7 +271,9 @@ export function NewBookingForm({
             </div>
             {staffList.length === 0 && !pending ? (
               <p className="mt-2 text-sm text-muted-foreground">
-                Ningún profesional realiza este servicio.
+                {onlyStaffId
+                  ? "No tienes asignado este servicio."
+                  : "Ningún profesional realiza este servicio."}
               </p>
             ) : null}
           </Section>
