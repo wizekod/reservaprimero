@@ -59,17 +59,23 @@ export async function startCheckout(): Promise<UrlResult> {
       .eq("id", business.id);
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [{ price: premium.stripe_price_id, quantity: 1 }],
-    success_url: `${clientEnv.NEXT_PUBLIC_APP_URL}/dashboard/suscripcion?ok=1`,
-    cancel_url: `${clientEnv.NEXT_PUBLIC_APP_URL}/dashboard/suscripcion`,
-    metadata: { business_id: business.id },
-    subscription_data: { metadata: { business_id: business.id } },
-  });
-
-  return { url: session.url ?? undefined };
+  // Un error de Stripe (precio inexistente, claves de otro modo…) no debe
+  // tumbar la página: se registra y el panel muestra un aviso.
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customerId,
+      line_items: [{ price: premium.stripe_price_id, quantity: 1 }],
+      success_url: `${clientEnv.NEXT_PUBLIC_APP_URL}/dashboard/suscripcion?ok=1`,
+      cancel_url: `${clientEnv.NEXT_PUBLIC_APP_URL}/dashboard/suscripcion`,
+      metadata: { business_id: business.id },
+      subscription_data: { metadata: { business_id: business.id } },
+    });
+    return { url: session.url ?? undefined };
+  } catch (err) {
+    console.error("[stripe] checkout", err);
+    return { error: "No se pudo iniciar el pago. Inténtalo más tarde." };
+  }
 }
 
 /** Portal de facturación de Stripe (cambiar método de pago, cancelar). */
@@ -83,9 +89,15 @@ export async function openBillingPortal(): Promise<UrlResult> {
     return { error: "Aún no tienes una suscripción activa." };
   }
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: business.stripe_customer_id,
-    return_url: `${clientEnv.NEXT_PUBLIC_APP_URL}/dashboard/suscripcion`,
-  });
-  return { url: session.url };
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: business.stripe_customer_id,
+      return_url: `${clientEnv.NEXT_PUBLIC_APP_URL}/dashboard/suscripcion`,
+    });
+    return { url: session.url };
+  } catch (err) {
+    // Típico: el portal no se ha guardado en el panel de Stripe.
+    console.error("[stripe] portal", err);
+    return { error: "No se pudo abrir el portal de pagos. Inténtalo más tarde." };
+  }
 }

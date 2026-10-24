@@ -86,7 +86,13 @@ export function PlanForm({ plan }: { plan: PlanRow }) {
               name="stripe_price_id"
               defaultValue={plan.stripe_price_id ?? ""}
               placeholder="price_..."
+              aria-invalid={state.fieldErrors?.stripe_price_id ? true : undefined}
             />
+            {state.fieldErrors?.stripe_price_id ? (
+              <p className="text-sm text-destructive">
+                {state.fieldErrors.stripe_price_id[0]}
+              </p>
+            ) : null}
           </div>
         </CardContent>
         <CardFooter>

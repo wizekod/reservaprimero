@@ -138,7 +138,16 @@ const planSchema = z.object({
   ),
   stripe_price_id: z.preprocess(
     emptyToUndefined,
-    z.string().trim().max(120).optional(),
+    z
+      .string()
+      .trim()
+      .max(120)
+      // El ID del producto (prod_…) se parece y es el error típico al copiar.
+      .regex(/^price_[A-Za-z0-9]+$/, {
+        message:
+          "Debe ser el ID del precio (price_…), no el del producto (prod_…). Está en la ficha del producto, en la sección Precios.",
+      })
+      .optional(),
   ),
 });
 
