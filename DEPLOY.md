@@ -142,9 +142,15 @@ dentro del mensaje. Sólo se envía a clientes de negocios cuyo plan tenga
    **permanente** con los permisos `whatsapp_business_messaging` y
    `whatsapp_business_management` → `WHATSAPP_ACCESS_TOKEN`. El token temporal
    de *API Setup* caduca en 24 h; no sirve para producción.
-4. Añade un método de pago en el WhatsApp Business Account: Meta cobra por
+4. Webhook (Meta lo pide en *Customize use case → Production setup*). En
+   Vercel añade `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (una cadena larga que tú
+   inventas) y `WHATSAPP_APP_SECRET` (*App settings → Basic → App secret*) y
+   redespliega. Después, en *WhatsApp → Configuration → Webhook*: Callback URL
+   `https://reservaprimero.com/api/webhooks/whatsapp`, Verify token el mismo
+   valor, *Verify and save*, y suscribe el campo **messages**.
+5. Añade un método de pago en el WhatsApp Business Account: Meta cobra por
    mensaje de plantilla entregado.
-5. En *WhatsApp Manager → Message templates* crea estas cuatro plantillas,
+6. En *WhatsApp Manager → Message templates* crea estas cuatro plantillas,
    categoría **Utility**, idioma **Spanish** (`es`; si eliges otra variante,
    p. ej. `es_MX`, pon ese código en `WHATSAPP_TEMPLATE_LANG`). El nombre y el
    orden de las variables tienen que coincidir con
