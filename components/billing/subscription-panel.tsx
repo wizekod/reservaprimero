@@ -41,6 +41,10 @@ export function SubscriptionPanel({
   paymentsConfigured: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  // Con suscripción viva, el cambio de plan y la cancelación van por el portal.
+  const subscribed =
+    subscriptionStatus !== null &&
+    ["active", "trialing", "past_due", "incomplete"].includes(subscriptionStatus);
 
   function checkout() {
     startTransition(async () => {
@@ -71,7 +75,7 @@ export function SubscriptionPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground">
-        {trialEndsAt ? (
+        {trialEndsAt && !subscribed ? (
           <p>
             Prueba hasta el{" "}
             {new Date(trialEndsAt).toLocaleDateString("es", {
@@ -87,13 +91,15 @@ export function SubscriptionPanel({
         ) : null}
       </CardContent>
       <CardFooter className="flex flex-wrap gap-3">
-        <Button
-          type="button"
-          onClick={checkout}
-          disabled={pending || !paymentsConfigured}
-        >
-          Cambiar a Premium
-        </Button>
+        {!subscribed ? (
+          <Button
+            type="button"
+            onClick={checkout}
+            disabled={pending || !paymentsConfigured}
+          >
+            Cambiar a Premium
+          </Button>
+        ) : null}
         {hasCustomer ? (
           <Button
             type="button"

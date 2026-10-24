@@ -65,6 +65,17 @@ export async function POST(request: Request) {
       .from("businesses")
       .update(patch)
       .eq("stripe_customer_id", customerId);
+
+    // Al pagar, la prueba termina: `trial` → `active`. Sólo desde `trial`,
+    // para no reactivar un negocio que el superadmin suspendió. Al cancelar
+    // no se toca: el negocio sigue activo, ya en el plan Free.
+    if (ACTIVE_STATUSES.includes(sub.status)) {
+      await admin
+        .from("businesses")
+        .update({ status: "active" })
+        .eq("stripe_customer_id", customerId)
+        .eq("status", "trial");
+    }
   }
 
   switch (event.type) {

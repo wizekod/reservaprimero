@@ -7,13 +7,18 @@ import { clientEnv } from "@/lib/env";
 
 type UrlResult = { url?: string; error?: string };
 
+/** Estados de Stripe en los que la suscripción sigue viva (cobrando o por cobrar). */
+const LIVE_STATUSES = ["active", "trialing", "past_due", "incomplete"];
+const hasLiveSubscription = (status: string | null) =>
+  status !== null && LIVE_STATUSES.includes(status);
+
 async function currentBusiness() {
   const profile = await getProfile();
   if (profile?.role !== "business_admin" || !profile.business_id) return null;
   const admin = createAdminClient();
   const { data } = await admin
     .from("businesses")
-    .select("id, name, stripe_customer_id")
+    .select("id, name, stripe_customer_id, subscription_status")
     .eq("id", profile.business_id)
     .maybeSingle();
   return data ?? null;
@@ -26,6 +31,10 @@ export async function startCheckout(): Promise<UrlResult> {
 
   const business = await currentBusiness();
   if (!business) return { error: "No autorizado." };
+  // Un segundo Checkout crearía otra suscripción y cobraría dos veces.
+  if (hasLiveSubscription(business.subscription_status)) {
+    return { error: "Ya tienes una suscripción. Gestiónala desde el portal." };
+  }
 
   const admin = createAdminClient();
   const { data: premium } = await admin
